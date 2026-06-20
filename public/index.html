@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ward Simulator for Residents - リアルタイム救命アクション</title>
+  <!-- Google Fonts: Outfit and Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
+  <!-- Stylesheet -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- Grid animation background -->
+  <div class="bg-decoration">
+    <div class="grid-moving"></div>
+  </div>
+
+  <!-- Settings Toggle Button (Top Right Floating) -->
+  <button id="btn-settings-toggle" class="btn-settings-toggle" title="GAS連携設定">
+    ⚙️
+  </button>
+
+  <!-- Settings Drawer -->
+  <div id="settings-drawer" class="settings-drawer">
+    <div class="drawer-header">
+      <h3>連携設定 (Google Sheets / GAS)</h3>
+      <button id="btn-settings-close" class="btn-close">&times;</button>
+    </div>
+    <div class="drawer-content">
+      <p class="settings-description">
+        Googleスプレッドシートと連携して、ハイスコアや修了症例の進捗を同期保存できます。
+      </p>
+      <div class="form-group">
+        <label for="gas-url-input">GAS Web App URL</label>
+        <input type="url" id="gas-url-input" placeholder="https://script.google.com/macros/s/.../exec" autocomplete="off">
+        <span class="input-hint">※空欄の場合はローカル保存モードで動作します。</span>
+      </div>
+      <button id="btn-settings-save" class="btn btn-primary btn-block">設定を保存</button>
+      <div class="settings-status-indicator">
+        連携状態: <span id="settings-connection-status" class="status-badge local">⚪ ローカル保存モード</span>
+      </div>
+    </div>
+  </div>
+
+  <div id="app">
+    <!-- LOBBY SCREEN -->
+    <div id="lobby-screen" class="screen active">
+      <div class="card lobby-card">
+        <h1 class="logo">Ward Simulator</h1>
+        <p class="subtitle">当直病棟急変シミュレーター (専攻医内科直・個人戦績保存版)</p>
+        
+        <div id="login-auth-panel">
+          <!-- Google Sign-In mockup -->
+          <button id="btn-google-login" class="btn btn-google">
+            <img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" alt="G" class="google-icon">
+            Google アカウントでサインイン
+          </button>
+          
+          <div class="divider"><span>またはテストアカウントでログイン</span></div>
+          
+          <div class="lobby-form">
+            <label for="user-email">テスト用メールアドレス</label>
+            <input type="email" id="user-email" placeholder="example@gmail.com" value="resident@gmail.com" autocomplete="off">
+            <label for="username">表示名（医師名）</label>
+            <input type="text" id="username" placeholder="例: 佐藤先生" value="佐藤先生" maxlength="15" autocomplete="off">
+            <button id="btn-join" class="btn btn-primary">ログインして当直室に入る</button>
+          </div>
+        </div>
+
+        <!-- Dashboard panel after login -->
+        <div id="lobby-waiting" class="lobby-waiting" style="display: none;">
+          <div class="profile-summary-card">
+            <div class="profile-avatar">🩺</div>
+            <div class="profile-info">
+              <h3 id="dash-name">---</h3>
+              <p id="dash-email" style="font-size:0.85rem; color:var(--text-muted);">---</p>
+              <div style="margin-top: 6px;">
+                <span id="lobby-connection-status" class="status-badge local">⚪ ローカル保存モード</span>
+              </div>
+            </div>
+          </div>
+          
+          <div class="stats-grid">
+            <div class="stat-box">
+              <span class="stat-label">ハイスコア</span>
+              <span id="dash-highscore" class="stat-value">0 点</span>
+            </div>
+            <div class="stat-box">
+              <span class="stat-label">修了した症例</span>
+              <span id="dash-completed" class="stat-value">0 / 6 件</span>
+            </div>
+          </div>
+          
+          <p class="waiting-hint">準備ができたら、下のボタンで個別当直シフトを開始してください。</p>
+          <button id="btn-start" class="btn btn-success btn-large">当直シフト開始 (3分間)</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- GAME PLAY SCREEN -->
+    <div id="game-screen" class="screen">
+      <!-- Top Status Bar -->
+      <header class="game-header">
+        <div class="header-left">
+          <h2>当直病棟リアルタイムモニター</h2>
+          <span id="game-connection-status" class="status-badge local">⚪ ローカル保存モード</span>
+        </div>
+        <div class="header-center">
+          <div class="status-indicator">
+            <span class="label">全体患者安全度</span>
+            <div class="safety-gauge-container">
+              <div id="safety-gauge" class="safety-gauge" style="width: 100%;"></div>
+              <span id="safety-value" class="safety-value">100%</span>
+            </div>
+          </div>
+        </div>
+        <div class="header-right">
+          <div class="timer-box">
+            <span class="timer-label">当直終了まで</span>
+            <span id="game-timer" class="timer-value timer-pulse">03:00</span>
+          </div>
+        </div>
+      </header>
+
+      <!-- Main Layout -->
+      <main class="game-main">
+        <!-- Left: Patients Grid (Beds with Vitals & Actions) -->
+        <section class="ward-section">
+          <div class="ward-grid" id="ward-grid">
+            <!-- Dynamically populated Bed Cards -->
+          </div>
+        </section>
+
+        <!-- Right: Control Panel (Scores, Logs, Chat) -->
+        <section class="control-section">
+          <!-- Scores / Profile -->
+          <div class="panel score-panel">
+            <h3>当直医師ステータス</h3>
+            <div class="player-profile-widget">
+              <div class="widget-name" id="widget-name">---</div>
+              <div class="widget-meta" id="widget-meta">自己ベスト: 0点</div>
+              <div class="widget-score-box">
+                <span class="score-label">現在のスコア:</span>
+                <span id="current-player-score" class="score-val">0 点</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Logs (expanded vertically since chat is removed) -->
+          <div class="panel log-panel" style="flex-grow: 1;">
+            <h3>病棟ナースステーションログ</h3>
+            <div id="log-feed" class="log-feed" style="height: 380px;">
+              <!-- Dynamically populated -->
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <!-- RESULT SCREEN -->
+    <div id="result-screen" class="screen">
+      <div class="card result-card">
+        <h1 id="result-title">当直シフト終了</h1>
+        <p class="subtitle">お疲れ様でした。今回の当直シフトの評価と実績です。</p>
+
+        <div class="result-summary">
+          <div class="summary-item">
+            <span class="label">最終患者安全度</span>
+            <span id="result-safety" class="value">85%</span>
+          </div>
+          <div class="summary-item">
+            <span class="label">当直評価</span>
+            <span id="result-grade" class="value grade-a">優秀</span>
+          </div>
+        </div>
+
+        <div class="result-details">
+          <!-- Left: Final Scores -->
+          <div class="result-column">
+            <h2>研修医の貢献スコア</h2>
+            <ul id="result-scores" class="result-scores-list">
+              <!-- Dynamically populated -->
+            </ul>
+          </div>
+          
+          <!-- Right: Saved Cases -->
+          <div class="result-column">
+            <h2>救命実績カルテ</h2>
+            <div id="debriefing-feed" class="debriefing-feed">
+              <!-- Dynamically populated -->
+            </div>
+          </div>
+        </div>
+
+        <div class="result-actions">
+          <button id="btn-restart" class="btn btn-primary btn-large">新しいシフトに入る (再プレイ)</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Client App Script -->
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

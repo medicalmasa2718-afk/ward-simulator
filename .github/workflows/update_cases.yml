@@ -1,0 +1,42 @@
+name: Update Cases
+
+on:
+  schedule:
+    - cron: '0 * * * *' # Run every hour
+  workflow_dispatch: # Allow manual trigger from GitHub UI
+
+permissions:
+  contents: write # Required to push cases.json updates back to the repo
+
+jobs:
+  update-cases:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Run update script
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GAS_URL: ${{ secrets.GAS_URL }}
+        run: |
+          python update_cases.py
+
+      - name: Commit and push changes
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/cases.json
+          # Only commit and push if there are actual changes
+          if ! git diff --cached --quiet; then
+            git commit -m "Auto-update cases from J-STAGE [skip ci]"
+            git push
+          else
+            echo "No changes detected in cases.json"
+          fi

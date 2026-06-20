@@ -1,0 +1,15 @@
+# Secrets and sensitive files
+data/gemini_key.txt
+data/gas_url.txt
+
+# Local database and stats
+users_db.json
+data/stats.json
+
+# OS and Python artifacts
+.DS_Store
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.ipynb_checkpoints/
