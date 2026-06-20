@@ -46,6 +46,40 @@
       <div class="settings-status-indicator">
         連携状態: <span id="settings-connection-status" class="status-badge local">⚪ ローカル保存モード</span>
       </div>
+      
+      <!-- Admin Panel Section -->
+      <div class="admin-panel-section" style="margin-top: 1.5rem; border-top: 1px solid var(--border-light); padding-top: 1.5rem;">
+        <h4 style="font-size: 0.85rem; color: var(--warning); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.75rem;">管理者専用デバッグツール</h4>
+        
+        <div class="form-group" style="margin-bottom: 0.75rem;">
+          <label for="admin-select-bed" style="font-size: 0.75rem; color: var(--text-muted);">対象ベッド</label>
+          <select id="admin-select-bed" style="background: rgba(0,0,0,0.3); border: 1px solid var(--border-light); border-radius: 6px; padding: 0.5rem; color: #fff; width: 100%; font-size: 0.85rem; outline: none;">
+            <option value="101">101号室</option>
+            <option value="102">102号室</option>
+            <option value="103">103号室</option>
+            <option value="104">104号室</option>
+          </select>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 0.75rem;">
+          <label for="admin-select-case" style="font-size: 0.75rem; color: var(--text-muted);">発生させる急変症例</label>
+          <select id="admin-select-case" style="background: rgba(0,0,0,0.3); border: 1px solid var(--border-light); border-radius: 6px; padding: 0.5rem; color: #fff; width: 100%; font-size: 0.85rem; outline: none;">
+            <!-- Will be populated dynamically in app.js -->
+          </select>
+        </div>
+
+        <button id="btn-admin-spawn" class="btn btn-success btn-block" style="margin-bottom: 0.75rem; background: var(--warning); box-shadow: 0 0 10px rgba(245, 158, 11, 0.3); color: #000; font-size: 0.85rem; font-weight: 700;">⚠️ 急変を強制発生させる</button>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-bottom: 0.75rem;">
+          <button id="btn-admin-heal" class="btn btn-chat" style="font-size: 0.75rem; padding: 0.5rem 0.25rem; border-radius: 6px; justify-content: center; background: #16243d; border: 1px solid var(--border-light); width: 100%;">💚 安全度100%</button>
+          <button id="btn-admin-time" class="btn btn-chat" style="font-size: 0.75rem; padding: 0.5rem 0.25rem; border-radius: 6px; justify-content: center; background: #16243d; border: 1px solid var(--border-light); width: 100%;">⏱️ 残り10秒に</button>
+        </div>
+
+        <div style="display: flex; align-items: center; justify-content: space-between; font-size: 0.8rem; color: var(--text-muted); padding: 0.25rem 0;">
+          <span>無敵モード (安全度減少なし)</span>
+          <input type="checkbox" id="admin-invincible-toggle" style="width: 16px; height: 16px; cursor: pointer;">
+        </div>
+      </div>
     </div>
   </div>
 

@@ -424,6 +424,14 @@ function plotLine(ctx, state, lane, x, val) {
 const wardGrid = document.getElementById('ward-grid');
 const logFeed = document.getElementById('log-feed');
 
+// Admin Panel Elements
+const adminSelectBed = document.getElementById('admin-select-bed');
+const adminSelectCase = document.getElementById('admin-select-case');
+const btnAdminSpawn = document.getElementById('btn-admin-spawn');
+const btnAdminHeal = document.getElementById('btn-admin-heal');
+const btnAdminTime = document.getElementById('btn-admin-time');
+const adminInvincibleToggle = document.getElementById('admin-invincible-toggle');
+
 // Result Screen
 const resultTitle = document.getElementById('result-title');
 const resultSafety = document.getElementById('result-safety');
@@ -460,6 +468,7 @@ async function init() {
     const cases = await res.json();
     if (cases && cases.length > 0) {
       CLINICAL_CASES = cases;
+      populateAdminCaseSelector();
     }
   } catch (e) {
     console.error("Failed to load cases:", e);
@@ -472,6 +481,17 @@ async function init() {
   
   // Directly render lobby state
   updateState(currentGameState);
+}
+
+function populateAdminCaseSelector() {
+  if (!adminSelectCase) return;
+  adminSelectCase.innerHTML = '';
+  CLINICAL_CASES.forEach(c => {
+    const opt = document.createElement('option');
+    opt.value = c.id;
+    opt.textContent = `${c.title} (${c.complaint})`;
+    adminSelectCase.appendChild(opt);
+  });
 }
 
 function recordStats(caseId, tried, correct) {
@@ -1078,6 +1098,10 @@ function startGameTimer() {
       currentGameState.peaceful_seconds = 0;
     }
     
+    if (adminInvincibleToggle && adminInvincibleToggle.checked) {
+      currentGameState.safety = 100;
+    }
+    
     // Check Game Over / Clear
     if (currentGameState.safety <= 0) {
       currentGameState.status = "RESULT";
@@ -1181,6 +1205,48 @@ function spawnEmergency() {
   addLog("🚨 【当直コール】" + bedId + "号室 (" + bed.patient + ") が急変！主訴: 「" + chosenCase.complaint + "」");
 }
 
+function forceSpawnEmergency(bedId, caseId) {
+  if (currentGameState.status !== "PLAYING") {
+    addLog("⚠️ 当直シフトが開始されていません。");
+    return;
+  }
+  
+  const chosenCase = CLINICAL_CASES.find(c => c.id === caseId);
+  if (!chosenCase) {
+    addLog("⚠️ 選択された症例が見つかりません。");
+    return;
+  }
+  
+  const bed = currentGameState.beds[bedId];
+  if (!bed) {
+    addLog("⚠️ 対象のベッドが見つかりません。");
+    return;
+  }
+  
+  // Clean up if there was an active event
+  bed.has_oxygen = false;
+  bed.has_iv = false;
+  
+  bed.patient = chosenCase.patient;
+  bed.diagnosis = chosenCase.complaint + "疑い";
+  bed.status = chosenCase.status;
+  bed.vitals = JSON.parse(JSON.stringify(chosenCase.vitals));
+  bed.active_event = {
+    id: chosenCase.id,
+    title: chosenCase.title,
+    complaint: chosenCase.complaint,
+    diagnosis: chosenCase.diagnosis,
+    description: chosenCase.description,
+    steps: JSON.parse(JSON.stringify(chosenCase.steps)),
+    current_step: 0,
+    last_feedback: null,
+    is_processing: false
+  };
+  
+  addLog("🚨 【管理者強制コール】" + bedId + "号室 (" + bed.patient + ") が急変！主訴: 「" + chosenCase.complaint + "」");
+  renderGame();
+}
+
 function performAction(bedId, actionId) {
   if (currentGameState.status !== "PLAYING") return;
   
@@ -1265,6 +1331,9 @@ function performAction(bedId, actionId) {
     
     const penalty = isCritical ? 15 : 7;
     currentGameState.safety = Math.max(0, currentGameState.safety - penalty);
+    if (adminInvincibleToggle && adminInvincibleToggle.checked) {
+      currentGameState.safety = 100;
+    }
     evt.last_feedback = "❌ 【不適切】 (安全度 -" + penalty + "%) " + selectedOpt.fb;
     
     const severityStr = isCritical ? "【致命的ミス】" : "";
@@ -1805,6 +1874,41 @@ if (btnSettingsSave) {
       if (hasJoined && currentUserData) {
         await saveUserScore();
       }
+    }
+  });
+}
+
+// --- ADMIN PANEL EVENT BINDINGS ---
+if (btnAdminSpawn) {
+  btnAdminSpawn.addEventListener('click', () => {
+    const bedId = adminSelectBed.value;
+    const caseId = adminSelectCase.value;
+    if (bedId && caseId) {
+      forceSpawnEmergency(bedId, caseId);
+    }
+  });
+}
+
+if (btnAdminHeal) {
+  btnAdminHeal.addEventListener('click', () => {
+    if (currentGameState.status === "PLAYING") {
+      currentGameState.safety = 100;
+      addLog("💚 管理者権限: 患者安全度を100%に全回復しました。");
+      renderGame();
+    } else {
+      addLog("⚠️ 当直シフトが開始されていません。");
+    }
+  });
+}
+
+if (btnAdminTime) {
+  btnAdminTime.addEventListener('click', () => {
+    if (currentGameState.status === "PLAYING") {
+      currentGameState.time_left = Math.min(currentGameState.time_left, 10);
+      addLog("⏱️ 管理者権限: 残り時間を10秒に短縮しました。");
+      renderGame();
+    } else {
+      addLog("⚠️ 当直シフトが開始されていません。");
     }
   });
 }
