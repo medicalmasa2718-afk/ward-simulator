@@ -137,7 +137,8 @@ const AudioMonitor = {
         this.playHeartbeat(freq, 0.08, vol);
       }
       
-      const interval = this.targetHR > 0 ? (60000 / this.targetHR) : 2000;
+      // 1.3x multiplier to make the audio tempo calmer and more realistic
+      const interval = this.targetHR > 0 ? (60000 / this.targetHR) * 1.3 : 2000;
       this.heartbeatTimeout = setTimeout(run, interval);
     };
     
