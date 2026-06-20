@@ -12,7 +12,7 @@ class LocalRequestHandler(http.server.SimpleHTTPRequestHandler):
         super().__init__(*args, directory=DIRECTORY, **kwargs)
 
     def do_GET(self):
-        if self.path == '/api/cases':
+        if self.path == '/api/cases' or self.path == '/data/cases.json':
             self.send_response(200)
             self.send_header('Content-Type', 'application/json')
             self.send_header('Access-Control-Allow-Origin', '*')
