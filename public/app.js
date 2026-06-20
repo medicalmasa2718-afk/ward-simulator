@@ -369,7 +369,18 @@ function startWaveformEngine() {
         
         let ecgVal = 0;
         if (ar) {
-          ecgVal = (Math.random() - 0.5) * 0.03;
+          if (bed.active_event && bed.active_event.is_arrest) {
+            if (bed.active_event.cpr_active) {
+              // Chest compressions artifact waveform (regular waves at ~100 bpm)
+              ecgVal = Math.sin(state.wfx * 0.15) * 0.6 + (Math.random() - 0.5) * 0.05;
+            } else {
+              // Ventricular Fibrillation (VF) chaotic waveform
+              ecgVal = (Math.sin(state.wfx * 0.2) + Math.sin(state.wfx * 0.5) * 0.5 + (Math.random() - 0.5) * 0.4) * 0.6;
+            }
+          } else {
+            // Asystole / Flatline with slight noise
+            ecgVal = (Math.random() - 0.5) * 0.03;
+          }
         } else if (bed.status === 'danger' && v.hr > 130) {
           ecgVal = (Math.random() - 0.5) * 1.3;
         } else {
@@ -787,17 +798,8 @@ function startGameTimer() {
       return;
     }
     
-    // 思考中の一時停止判定: 「アクティブなイベントがあり、かつ処置中(is_processing)ではない」ベッドがある場合は減算をスキップ
-    let isThinking = false;
-    Object.values(currentGameState.beds).forEach(bed => {
-      if (bed.active_event && !bed.active_event.is_processing) {
-        isThinking = true;
-      }
-    });
-    
-    if (!isThinking) {
-      currentGameState.time_left -= 1;
-    }
+    // 思考中の一時停止判定を完全に廃止し、常に制限時間を減算する
+    currentGameState.time_left -= 1;
     
     let hasActiveEmergency = false;
     
@@ -831,6 +833,22 @@ function startGameTimer() {
       const v = bed.vitals;
       const c_id = evt.id;
       const step = evt.current_step;
+      
+      // 心停止 (ACLS) の時間経過およびバイタル制御
+      if (evt.is_arrest) {
+        evt.arrest_seconds = (evt.arrest_seconds || 0) + 1;
+        bed.status = 'danger';
+        v.hr = 0;
+        v.bp_sys = 0;
+        v.spo2 = evt.cpr_active ? 15 : 0;
+        v.rr = 0;
+        
+        if (evt.arrest_seconds >= 30) {
+          currentGameState.safety = 0;
+          addLog("💀 " + bid + "号室の患者 (" + bed.patient + ") が心停止から30秒間蘇生されず、死亡に至りました...");
+        }
+        return;
+      }
       
       // 処置インターバル中 (is_processing) はバイタル減少をストップさせ、安定化へ寄せる
       if (evt.is_processing) {
@@ -869,6 +887,13 @@ function startGameTimer() {
           v.hr = Math.max(100, v.hr - 1);
           v.bp_sys = Math.min(95, v.bp_sys + 1);
         }
+        return;
+      }
+      
+      // 急変猶予時間の減算
+      evt.time_limit = (evt.time_limit || 45) - 1;
+      if (evt.time_limit <= 0) {
+        triggerArrest(bid);
         return;
       }
       
@@ -1199,7 +1224,12 @@ function spawnEmergency() {
     steps: JSON.parse(JSON.stringify(chosenCase.steps)),
     current_step: 0,
     last_feedback: null,
-    is_processing: false // 処置ディレイフラグ
+    is_processing: false,
+    time_limit: 45,
+    is_arrest: false,
+    cpr_active: false,
+    adrenaline_given: false,
+    arrest_seconds: 0
   };
   
   addLog("🚨 【当直コール】" + bedId + "号室 (" + bed.patient + ") が急変！主訴: 「" + chosenCase.complaint + "」");
@@ -1240,7 +1270,12 @@ function forceSpawnEmergency(bedId, caseId) {
     steps: JSON.parse(JSON.stringify(chosenCase.steps)),
     current_step: 0,
     last_feedback: null,
-    is_processing: false
+    is_processing: false,
+    time_limit: 45,
+    is_arrest: false,
+    cpr_active: false,
+    adrenaline_given: false,
+    arrest_seconds: 0
   };
   
   addLog("🚨 【管理者強制コール】" + bedId + "号室 (" + bed.patient + ") が急変！主訴: 「" + chosenCase.complaint + "」");
@@ -1338,6 +1373,116 @@ function performAction(bedId, actionId) {
     
     const severityStr = isCritical ? "【致命的ミス】" : "";
     addLog("❌ 処置不適切: " + bedId + "号室 - " + selectedOpt.text + " " + severityStr + " (安全度 -" + penalty + "%)");
+    
+    if (isCritical) {
+      triggerArrest(bedId);
+    }
+  }
+  
+  renderGame();
+}
+
+function triggerArrest(bedId) {
+  const bed = currentGameState.beds[bedId];
+  if (!bed || !bed.active_event || bed.active_event.is_arrest) return;
+  
+  bed.active_event.is_arrest = true;
+  bed.active_event.cpr_active = false;
+  bed.active_event.adrenaline_given = false;
+  bed.active_event.arrest_seconds = 0;
+  
+  bed.status = 'danger';
+  bed.vitals.hr = 0;
+  bed.vitals.bp_sys = 0;
+  bed.vitals.spo2 = 0;
+  bed.vitals.rr = 0;
+  
+  addLog("🚨 【緊急事態】" + bedId + "号室の患者 (" + bed.patient + ") が心停止 (VF / 無収縮) に陥りました！直ちに二次救命処置 (ACLS) を開始してください！");
+  
+  updateAudioEngine();
+  renderGame();
+}
+
+function triggerRosc(bedId) {
+  const bed = currentGameState.beds[bedId];
+  if (!bed || !bed.active_event || !bed.active_event.is_arrest) return;
+  
+  bed.active_event.is_arrest = false;
+  bed.active_event.cpr_active = false;
+  bed.active_event.adrenaline_given = false;
+  bed.active_event.time_limit = 30; // 猶予時間を30秒にリセット
+  
+  // 安全度を 15% 減点
+  const inv = document.getElementById('admin-invincible-toggle');
+  if (!inv || !inv.checked) {
+    currentGameState.safety = Math.max(0, currentGameState.safety - 15);
+  }
+  
+  // バイタルを初期化 (症例の vitals に設定)
+  const chosenCase = CLINICAL_CASES.find(c => c.id === bed.active_event.id);
+  if (chosenCase) {
+    bed.vitals = JSON.parse(JSON.stringify(chosenCase.vitals));
+  } else {
+    bed.vitals.hr = 70;
+    bed.vitals.bp_sys = 120;
+    bed.vitals.spo2 = 98;
+    bed.vitals.rr = 16;
+  }
+  bed.status = chosenCase ? chosenCase.status : 'stable';
+  
+  addLog("🎉 【蘇生成功】" + bedId + "号室の患者が自己心拍再開 (ROSC) しました！安全度ペナルティ(-15%)。治療を再開してください。");
+  
+  updateAudioEngine();
+  renderGame();
+}
+
+function performAclsAction(bedId, actionType) {
+  if (currentGameState.status !== "PLAYING") return;
+  const bed = currentGameState.beds[bedId];
+  if (!bed || !bed.active_event || !bed.active_event.is_arrest) return;
+  
+  const evt = bed.active_event;
+  
+  if (actionType === 'cpr') {
+    evt.cpr_active = !evt.cpr_active;
+    if (evt.cpr_active) {
+      addLog("✊ " + bedId + "号室で胸骨圧迫 (CPR) を開始しました。");
+    } else {
+      addLog("✋ " + bedId + "号室の胸骨圧迫 (CPR) を中断しました。");
+    }
+  } else if (actionType === 'adrenaline') {
+    if (evt.adrenaline_given) {
+      addLog("⚠️ すでにアドレナリンが投与されています。除細動を行ってください。");
+      return;
+    }
+    evt.adrenaline_given = true;
+    addLog("💉 " + bedId + "号室にアドレナリン 1mg を静注しました。次の除細動のROSC成功率が向上します。");
+  } else if (actionType === 'shock') {
+    addLog("⚡ " + bedId + "号室で除細動 (電気ショック) を実行します。全員離れて！");
+    
+    AudioMonitor.playHeartbeat(1200, 0.4, 0.08);
+    
+    let successChance = 0.05;
+    if (evt.cpr_active) {
+      successChance = 0.35;
+    }
+    if (evt.adrenaline_given) {
+      successChance += 0.20;
+    }
+    
+    setTimeout(() => {
+      if (currentGameState.status !== "PLAYING") return;
+      const b = currentGameState.beds[bedId];
+      if (!b || !b.active_event || !b.active_event.is_arrest) return;
+      
+      if (Math.random() < successChance) {
+        triggerRosc(bedId);
+      } else {
+        b.active_event.adrenaline_given = false; // アドレナリン効果は消費される
+        addLog("❌ " + bedId + "号室の除細動は失敗しました。反応なし。ACLSを継続してください。");
+        renderGame();
+      }
+    }, 1000);
   }
   
   renderGame();
@@ -1605,6 +1750,36 @@ function renderBeds() {
           </div>
         </div>
       `;
+    } else if (evt.is_arrest) {
+      // 心停止 (ACLS) パネルUI
+      const timeRemaining = 30 - evt.arrest_seconds;
+      const timeClass = timeRemaining <= 10 ? 'danger pulsate' : 'danger';
+      const cprStatusText = evt.cpr_active ? "胸骨圧迫実施中 (100回/分)..." : "胸骨圧迫が停止しています！";
+      const cprClass = evt.cpr_active ? "btn-acls active" : "btn-acls";
+      const adrenalineText = evt.adrenaline_given ? "アドレナリン投与済" : "アドレナリン 1mg 静注";
+      const adrenalineClass = evt.adrenaline_given ? "btn-acls disabled" : "btn-acls";
+      
+      actionsPanelHtml = `
+        <div class="bed-actions-panel acls-panel">
+          <div class="event-details">
+            <span class="event-title alert-blink">🚨 🫀 心停止 (Cardiac Arrest) 発生！</span>
+            <span class="event-desc">心室細動 (VF) または無収縮 (Asystole) を検知しました。直ちに二次救命処置 (ACLS) を開始してください！</span>
+            <div class="event-step-bar arrest-bar">💀 脳死・死亡まで: <span class="${timeClass}">${timeRemaining}秒</span></div>
+            <div class="cpr-indicator ${evt.cpr_active ? 'active' : ''}">${cprStatusText}</div>
+          </div>
+          <div class="actions-grid acls-layout">
+            <button class="${cprClass}" data-bed="${bedId}" data-acls-action="cpr">
+              ✊ ${evt.cpr_active ? '胸骨圧迫を停止する' : '胸骨圧迫を開始する'}
+            </button>
+            <button class="btn-acls btn-shock" data-bed="${bedId}" data-acls-action="shock">
+              ⚡ 除細動 (電気ショック)
+            </button>
+            <button class="${adrenalineClass}" data-bed="${bedId}" data-acls-action="adrenaline">
+              💉 ${adrenalineText}
+            </button>
+          </div>
+        </div>
+      `;
     } else if (evt.is_processing) {
       // 処置インターバル中のローディング表示
       actionsPanelHtml = `
@@ -1631,10 +1806,16 @@ function renderBeds() {
         </button>
       `).join('');
       
+      const limitSec = evt.time_limit || 45;
+      const limitClass = limitSec <= 15 ? 'danger pulsate' : (limitSec <= 30 ? 'warning' : 'info');
+      
       actionsPanelHtml = `
         <div class="bed-actions-panel">
           <div class="event-details">
-            <span class="event-title">🚨 ${escapeHtml(evt.complaint)}</span> <!-- 診断名ではなく主訴をタイトルに -->
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 4px;">
+              <span class="event-title">🚨 ${escapeHtml(evt.complaint)}</span>
+              <span class="event-timer-badge ${limitClass}">⚠️ 急変まで: ${limitSec}秒</span>
+            </div>
             <span class="event-desc">${escapeHtml(evt.description)}</span>
             <div class="event-step-bar">${progressText}</div>
             <div class="event-question">${escapeHtml(currentStep.q)}</div>
@@ -1716,6 +1897,15 @@ function renderBeds() {
         const bid = btn.getAttribute('data-bed');
         const aid = btn.getAttribute('data-action');
         performAction(bid, aid);
+      });
+    });
+    
+    // Bind click events to ACLS buttons inside the card
+    card.querySelectorAll('.btn-acls').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const bid = btn.getAttribute('data-bed');
+        const actionType = btn.getAttribute('data-acls-action');
+        performAclsAction(bid, actionType);
       });
     });
     

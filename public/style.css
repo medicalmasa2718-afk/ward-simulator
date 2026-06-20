@@ -1416,3 +1416,145 @@ h1, h2, h3 {
   100% { transform: scale(1.2); opacity: 1; }
 }
 
+/* --- ACLS (二次救命処置) パネル & ボタン --- */
+.bed-actions-panel.acls-panel {
+  border: 1px solid rgba(239, 68, 68, 0.4) !important;
+  background: rgba(220, 38, 38, 0.03) !important;
+  box-shadow: inset 0 0 20px rgba(239, 68, 68, 0.05) !important;
+}
+
+.acls-layout {
+  grid-template-columns: 1fr;
+  gap: 0.75rem;
+}
+
+.btn-acls {
+  width: 100%;
+  padding: 0.85rem 1rem;
+  border-radius: 8px;
+  border: 1px solid var(--border-light);
+  background: #111c30;
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.btn-acls:hover:not(.disabled) {
+  border-color: #f59e0b;
+  background: #182947;
+  box-shadow: 0 0 10px rgba(245, 158, 11, 0.2);
+}
+
+.btn-acls.active {
+  background: #10b981 !important;
+  color: #000 !important;
+  border-color: #059669 !important;
+  box-shadow: 0 0 15px rgba(16, 185, 129, 0.4);
+  animation: cpr-active-pulse 1.2s infinite;
+}
+
+@keyframes cpr-active-pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.02); }
+  100% { transform: scale(1); }
+}
+
+.btn-acls.btn-shock {
+  background: #dc2626;
+  border-color: #ef4444;
+  color: #fff;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+}
+
+.btn-acls.btn-shock:hover {
+  background: #b91c1c;
+  box-shadow: 0 0 15px rgba(239, 68, 68, 0.4);
+}
+
+.btn-acls.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: #0f172a;
+  border-color: rgba(255,255,255,0.05);
+  color: var(--text-muted);
+}
+
+/* 点滅・警告テキスト */
+.alert-blink {
+  color: var(--danger);
+  animation: text-alert-blink 0.8s ease-in-out infinite alternate;
+  font-weight: 800;
+}
+
+@keyframes text-alert-blink {
+  0% { opacity: 0.4; text-shadow: 0 0 0px rgba(239,68,68,0); }
+  100% { opacity: 1; text-shadow: 0 0 8px rgba(239,68,68,0.5); }
+}
+
+.event-step-bar.arrest-bar {
+  background: rgba(239, 68, 68, 0.15) !important;
+  border: 1px solid rgba(239, 68, 68, 0.3) !important;
+  color: #f87171 !important;
+  font-weight: 700;
+}
+
+.cpr-indicator {
+  padding: 0.5rem;
+  border-radius: 6px;
+  background: rgba(255,255,255,0.02);
+  border: 1px solid var(--border-light);
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-align: center;
+  color: var(--text-muted);
+  transition: all 0.3s;
+}
+
+.cpr-indicator.active {
+  background: rgba(16, 185, 129, 0.1);
+  border-color: rgba(16, 185, 129, 0.3);
+  color: var(--success);
+}
+
+/* 猶予時間タイマーバッジ */
+.event-timer-badge {
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+}
+
+.event-timer-badge.info {
+  background: rgba(59, 130, 246, 0.15);
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  color: #60a5fa;
+}
+
+.event-timer-badge.warning {
+  background: rgba(245, 158, 11, 0.15);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  color: #fbbf24;
+}
+
+.event-timer-badge.danger {
+  background: rgba(239, 68, 68, 0.25);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  color: #f87171;
+}
+
+.pulsate {
+  animation: badge-pulsate-scale 1s infinite alternate;
+}
+
+@keyframes badge-pulsate-scale {
+  0% { transform: scale(1); opacity: 0.8; }
+  100% { transform: scale(1.05); opacity: 1; }
+}
+
+
