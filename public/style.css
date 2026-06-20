@@ -365,7 +365,7 @@ h1, h2, h3 {
   border-radius: 16px;
   padding: 1.5rem;
   display: grid;
-  grid-template-columns: 1fr 1.2fr 1.8fr; /* Patient info, Vitals, Action Grid */
+  grid-template-columns: 1fr 1.5fr 1.5fr; /* Patient info/SVG, Vitals/Canvas, Action Grid */
   gap: 1.5rem;
   align-items: center;
   transition: all 0.3s ease;
@@ -451,39 +451,62 @@ h1, h2, h3 {
   color: var(--text-muted);
 }
 
-/* Middle Col: Vitals Monitor UI */
+/* Middle Col: Vitals Monitor UI (4-Quadrant & Canvas) */
 .vital-monitor {
-  background: rgba(0,0,0,0.4);
-  border: 1px solid rgba(255,255,255,0.05);
-  border-radius: 10px;
-  padding: 0.75rem;
+  background: #02060c;
+  border: 2px solid #14283a;
+  border-radius: 12px;
+  padding: 0.6rem;
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+  box-shadow: inset 0 0 15px rgba(0,0,0,0.9);
 }
 
-.vital-row {
+.vital-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.vital-cell {
+  background: rgba(10, 16, 29, 0.4);
+  border: 1px solid rgba(255,255,255,0.03);
+  border-radius: 6px;
+  padding: 4px 6px;
   display: flex;
-  justify-content: space-between;
-  align-items: center;
+  flex-direction: column;
+  justify-content: center;
 }
 
-.vital-label {
-  font-size: 0.75rem;
-  font-weight: 700;
-  color: var(--text-muted);
+.vital-cell .v-label {
+  font-size: 0.6rem;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  opacity: 0.85;
+  margin-bottom: 2px;
 }
 
-.vital-value {
+.vital-cell .v-val {
   font-family: monospace;
-  font-size: 1.1rem;
+  font-size: 1.15rem;
+  font-weight: 900;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.vital-cell .v-sub {
+  font-size: 0.65rem;
   font-weight: 700;
+  opacity: 0.8;
+  margin-top: 1px;
 }
 
 /* Monitor specific colors */
-.v-hr { color: #10b981; } /* Neon green */
-.v-bp { color: #f59e0b; } /* Orange */
-.v-spo2 { color: #00f3ff; } /* Cyan */
+.c-ecg { color: #37e07a; } /* HR: Neon Green */
+.c-art { color: #ff5d6c; } /* BP: Neon Red/Pink */
+.c-pleth { color: #36c6ff; } /* SpO2: Neon Blue/Cyan */
+.c-resp { color: #ffd24a; } /* RR: Neon Yellow */
 
 .v-pulse-heart {
   display: inline-block;
@@ -495,83 +518,75 @@ h1, h2, h3 {
   100% { transform: scale(1.2); }
 }
 
-/* ECG WAVEFORM ANIMATIONS */
-.ecg-container {
+/* Waveform Canvas Area */
+.waveform-container {
   position: relative;
   width: 100%;
-  height: 48px;
-  background: rgba(0, 0, 0, 0.6);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  height: 80px;
+  background: #000;
+  border: 1px solid rgba(255,255,255,0.05);
   border-radius: 6px;
   overflow: hidden;
+}
+
+.waveform-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* 2.5D Isometric Micro-Room */
+.micro-room-container {
+  width: 100%;
+  height: 130px;
+  background: linear-gradient(160deg, #101625, #171d2b);
+  border: 1px solid var(--border-light);
+  border-radius: 12px;
   margin-top: 0.5rem;
+  overflow: hidden;
+  position: relative;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
-.ecg-svg {
+.micro-room-svg {
   width: 100%;
   height: 100%;
+  display: block;
 }
 
-.ecg-path {
-  fill: none;
-  stroke: var(--success); /* Green for stable */
-  stroke-width: 1.5;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  
-  /* SVG scrolling animation */
-  stroke-dasharray: 1000;
-  stroke-dashoffset: 1000;
-  animation: ecg-sweep 5s linear infinite;
+.hotspot {
+  transition: opacity 0.2s ease, filter 0.2s ease;
+  cursor: pointer;
 }
 
-/* danger state waveforms (fast/VF or flatline) */
-.ecg-container.danger .ecg-path {
-  stroke: var(--danger);
-  animation-duration: 1.8s; /* Slowed down from 1.2s */
+.hotspot:hover {
+  filter: brightness(1.25);
 }
 
-/* flatline state */
-.ecg-container.flatline .ecg-path {
-  stroke: var(--danger);
-  animation: ecg-flatline 7s linear infinite;
+@keyframes cyanosis-pulse {
+  0% { fill: #ffd9b8; }
+  100% { fill: #a0b2d2; } /* Pale blue cyanosis color */
 }
 
-/* warning state (moderately fast) */
-.ecg-container.warning .ecg-path {
-  stroke: var(--warning);
-  animation-duration: 3s; /* Slowed down from 2s */
+.face-cyanosis {
+  animation: cyanosis-pulse 2s infinite alternate;
 }
 
-@keyframes ecg-sweep {
-  to {
-    stroke-dashoffset: 0;
-  }
+.sweat-drop {
+  fill: #5b8def;
+  animation: sweat-drip 1.5s infinite;
 }
 
-@keyframes ecg-flatline {
-  0% { stroke-dashoffset: 1000; }
-  100% { stroke-dashoffset: 0; }
-}
-
-/* ECG grid lines */
-.ecg-grid-bg {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background-image: 
-    linear-gradient(rgba(0, 255, 102, 0.04) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(0, 255, 102, 0.04) 1px, transparent 1px);
-  background-size: 8px 8px;
-  pointer-events: none;
+@keyframes sweat-drip {
+  0% { transform: translateY(0); opacity: 0; }
+  50% { opacity: 1; }
+  100% { transform: translateY(4px); opacity: 0; }
 }
 
 /* alarm badge on vital card */
 .monitor-alert-badge {
   font-family: monospace;
-  font-size: 0.7rem;
+  font-size: 0.65rem;
   font-weight: 900;
   color: #fff;
   background: var(--danger);
@@ -582,6 +597,7 @@ h1, h2, h3 {
   display: inline-block;
   margin-top: 0.25rem;
   text-transform: uppercase;
+  text-align: center;
 }
 
 @keyframes alarm-pulse-bg {

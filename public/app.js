@@ -2,10 +2,10 @@
 let CLINICAL_CASES = [];
 
 const BASE_BEDS = {
-  "101": { patient: "佐藤 一郎 (72歳)", diagnosis: "慢性心不全・経過観察", status: "stable", vitals: { hr: 72, bp_sys: 124, bp_dia: 80, spo2: 97 }, active_event: null },
-  "102": { patient: "鈴木 美咲 (28歳)", diagnosis: "気管支喘息・点滴中", status: "stable", vitals: { hr: 80, bp_sys: 110, bp_dia: 70, spo2: 98 }, active_event: null },
-  "103": { patient: "高橋 健二 (55歳)", diagnosis: "肝硬変・腹水管理", status: "stable", vitals: { hr: 65, bp_sys: 138, bp_dia: 85, spo2: 96 }, active_event: null },
-  "104": { patient: "田中 友美 (42歳)", diagnosis: "腎盂腎炎・抗菌薬治療", status: "stable", vitals: { hr: 88, bp_sys: 115, bp_dia: 75, spo2: 95 }, active_event: null },
+  "101": { patient: "佐藤 一郎 (72歳)", diagnosis: "慢性心不全・経過観察", status: "stable", vitals: { hr: 72, bp_sys: 124, bp_dia: 80, spo2: 97, rr: 14 }, active_event: null },
+  "102": { patient: "鈴木 美咲 (28歳)", diagnosis: "気管支喘息・点滴中", status: "stable", vitals: { hr: 80, bp_sys: 110, bp_dia: 70, spo2: 98, rr: 16 }, active_event: null },
+  "103": { patient: "高橋 健二 (55歳)", diagnosis: "肝硬変・腹水管理", status: "stable", vitals: { hr: 65, bp_sys: 138, bp_dia: 85, spo2: 96, rr: 12 }, active_event: null },
+  "104": { patient: "田中 友美 (42歳)", diagnosis: "腎盂腎炎・抗菌薬治療", status: "stable", vitals: { hr: 88, bp_sys: 115, bp_dia: 75, spo2: 95, rr: 18 }, active_event: null },
 };
 
 // --- STATE VARIABLES ---
@@ -132,7 +132,10 @@ const AudioMonitor = {
       }
       
       if (this.targetHR > 0) {
-        const freq = this.targetHR > 120 ? 900 : 750;
+        // Modulate pitch dynamically based on lowest SpO2 (simulates patient monitor beep pitch drop)
+        const spo2 = this.targetSpO2 || 98;
+        // 100% SpO2 = 800Hz, 80% SpO2 = 440Hz
+        const freq = Math.max(380, 440 + (spo2 - 80) * 18);
         const vol = this.targetHR > 120 ? 0.04 : 0.02;
         this.playHeartbeat(freq, 0.08, vol);
       }
@@ -220,6 +223,7 @@ function updateAudioEngine() {
   
   let maxDangerLevel = 'stable';
   let highestHR = 70;
+  let lowestSpO2 = 98; // Track the lowest SpO2 to modulate QRS beep pitch
   let hasFlatline = false;
   
   if (currentGameState.status === "PLAYING" && currentGameState.beds) {
@@ -239,18 +243,182 @@ function updateAudioEngine() {
       if (bed.active_event && v.hr > highestHR) {
         highestHR = v.hr;
       }
+      
+      // Track lowest SpO2 of active emergency beds
+      if (bed.active_event && v.spo2 > 0 && v.spo2 < lowestSpO2) {
+        lowestSpO2 = v.spo2;
+      }
     });
   }
   
   if (hasFlatline) {
     AudioMonitor.targetHR = 0;
+    AudioMonitor.targetSpO2 = 0;
     AudioMonitor.updateAlarmState('flatline');
   } else {
     AudioMonitor.targetHR = highestHR;
+    AudioMonitor.targetSpO2 = lowestSpO2;
     AudioMonitor.updateAlarmState(maxDangerLevel);
   }
 }
 
+// --- WAVEFORM CANVAS ENGINE ---
+const bedWaveState = {
+  "101": { wfx: 0, beatPhase: 0, prevPy: {} },
+  "102": { wfx: 0, beatPhase: 0, prevPy: {} },
+  "103": { wfx: 0, beatPhase: 0, prevPy: {} },
+  "104": { wfx: 0, beatPhase: 0, prevPy: {} }
+};
+
+function gauss(p, c, w, a) {
+  return a * Math.exp(-((p - c) * (p - c)) / (2 * w * w));
+}
+
+function ecgWave(p) {
+  return gauss(p, 0.16, 0.020, 0.12) - gauss(p, 0.235, 0.006, 0.10) + gauss(p, 0.25, 0.006, 1.0) - gauss(p, 0.265, 0.007, 0.22) + gauss(p, 0.46, 0.040, 0.26);
+}
+
+function plethWave(p) {
+  let v = Math.max(0, Math.sin(Math.PI * Math.min(1, p * 1.6))) * 1.0;
+  v += gauss(p, 0.45, 0.06, 0.25);
+  return v;
+}
+
+function artWave(p) {
+  let v = Math.max(0, Math.sin(Math.PI * Math.min(1, p * 1.5))) * 1.0;
+  v += gauss(p, 0.42, 0.05, 0.20);
+  return v;
+}
+
+let waveIntervalId = null;
+let lastWaveTS = 0;
+
+function startWaveformEngine() {
+  if (waveIntervalId) {
+    cancelAnimationFrame(waveIntervalId);
+  }
+  
+  lastWaveTS = 0;
+  Object.keys(bedWaveState).forEach(bid => {
+    bedWaveState[bid].wfx = 0;
+    bedWaveState[bid].beatPhase = 0;
+    bedWaveState[bid].prevPy = {};
+  });
+  
+  function loop(ts) {
+    if (currentGameState.status !== "PLAYING") {
+      waveIntervalId = null;
+      return;
+    }
+    if (!lastWaveTS) lastWaveTS = ts;
+    let dt = (ts - lastWaveTS) / 1000;
+    lastWaveTS = ts;
+    if (dt > 0.1) dt = 0.1;
+    
+    Object.entries(currentGameState.beds).forEach(([bid, bed]) => {
+      const canvas = document.getElementById(`canvas-wf-${bid}`);
+      if (!canvas) return;
+      
+      const ctx = canvas.getContext('2d');
+      const state = bedWaveState[bid];
+      const v = bed.vitals;
+      
+      if (canvas.width !== 400) {
+        canvas.width = 400;
+        canvas.height = 120;
+        ctx.fillStyle = "#000";
+        ctx.fillRect(0, 0, 400, 120);
+        state.wfx = 0;
+        state.prevPy = {};
+      }
+      
+      const W = canvas.width;
+      const H = canvas.height;
+      const ar = (v.hr === 0 || v.spo2 === 0);
+      const hr = ar ? 60 : Math.min(180, Math.max(30, v.hr));
+      
+      const lanes = [
+        { y: H * 0.22, h: H * 0.16, col: "#37e07a" }, // ECG
+        { y: H * 0.54, h: H * 0.14, col: "#ff5d6c" }, // Art
+        { y: H * 0.82, h: H * 0.14, col: "#36c6ff" }  // Pleth
+      ];
+      
+      const speed = W / 4.0;
+      const steps = Math.max(1, Math.round(speed * dt));
+      const dbp = Math.max(30, Math.round(v.bp_sys * 0.65));
+      
+      for (let i = 0; i < steps; i++) {
+        const x = state.wfx;
+        
+        ctx.fillStyle = "#000";
+        ctx.fillRect(x, 0, 6, H);
+        
+        if (x % 16 === 0) {
+          ctx.strokeStyle = "rgba(0, 255, 102, 0.02)";
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.moveTo(x, 0);
+          ctx.lineTo(x, H);
+          ctx.stroke();
+        }
+        
+        state.beatPhase += (hr / 60) * (1 / speed);
+        if (state.beatPhase >= 1) {
+          state.beatPhase -= 1;
+        }
+        
+        let ecgVal = 0;
+        if (ar) {
+          ecgVal = (Math.random() - 0.5) * 0.03;
+        } else if (bed.status === 'danger' && v.hr > 130) {
+          ecgVal = (Math.random() - 0.5) * 1.3;
+        } else {
+          ecgVal = ecgWave(state.beatPhase);
+        }
+        plotLine(ctx, state, lanes[0], x, ecgVal);
+        
+        let artVal = 0;
+        if (!ar) {
+          artVal = artWave(state.beatPhase) * ((v.bp_sys - dbp) / 60) + (dbp - 70) / 120;
+        }
+        plotLine(ctx, state, lanes[1], x, artVal);
+        
+        let plethVal = 0;
+        if (!ar) {
+          plethVal = plethWave(state.beatPhase) * (0.5 + (v.spo2 - 90) / 25);
+        }
+        plotLine(ctx, state, lanes[2], x, plethVal);
+        
+        state.wfx += 1;
+        if (state.wfx >= W) {
+          state.wfx = 0;
+        }
+      }
+    });
+    
+    waveIntervalId = requestAnimationFrame(loop);
+  }
+  
+  waveIntervalId = requestAnimationFrame(loop);
+}
+
+function plotLine(ctx, state, lane, x, val) {
+  const y = lane.y - val * lane.h;
+  ctx.strokeStyle = lane.col;
+  ctx.lineWidth = 1.8;
+  ctx.beginPath();
+  
+  const pp = state.prevPy[lane.col];
+  if (pp && pp.x === x - 1) {
+    ctx.moveTo(pp.x, pp.y);
+  } else {
+    ctx.moveTo(x, y);
+  }
+  ctx.lineTo(x, y);
+  ctx.stroke();
+  
+  state.prevPy[lane.col] = { x, y };
+}
 
 // Beds Container
 const wardGrid = document.getElementById('ward-grid');
@@ -587,6 +755,7 @@ function startGame() {
   spawnEmergency();
   startGameTimer();
   updateState(currentGameState);
+  startWaveformEngine();
 }
 
 function startGameTimer() {
@@ -868,6 +1037,31 @@ function startGameTimer() {
           v.bp_sys = Math.min(110, v.bp_sys + 2);
         }
       }
+
+      // Dynamic Respiration Rate (RR) simulator
+      if (evt) {
+        if (evt.is_processing) {
+          // Returning to normal (16) under treatment
+          v.rr = v.rr > 16 ? Math.max(16, v.rr - 1) : Math.min(16, v.rr + 1);
+        } else {
+          // Tachypnea compensation due to hypoxia, tachycardia, or shock
+          let targetRR = 16;
+          if (v.spo2 < 90) targetRR += (90 - v.spo2) * 1.5;
+          if (v.hr > 100) targetRR += (v.hr - 100) * 0.15;
+          if (v.bp_sys < 90) targetRR += (90 - v.bp_sys) * 0.1;
+          targetRR = Math.min(38, Math.round(targetRR));
+          
+          if (v.hr === 0 || v.spo2 === 0) {
+            v.rr = 0; // Apnea / Arrest
+          } else {
+            v.rr = v.rr < targetRR ? Math.min(targetRR, v.rr + 1) : Math.max(targetRR, v.rr - 1);
+          }
+        }
+      } else {
+        // Returning to base RR when stable
+        const baseRR = bid === "101" ? 14 : bid === "102" ? 16 : bid === "103" ? 12 : 18;
+        v.rr = v.rr < baseRR ? v.rr + 1 : v.rr > baseRR ? v.rr - 1 : baseRR;
+      }
     });
     
     // Safety recovery system (every 3s of peace)
@@ -1004,6 +1198,17 @@ function performAction(bedId, actionId) {
   if (!player) return;
   
   recordStats(evt.id, 1, selectedOpt.ok ? 1 : 0);
+
+  // Set visual treatment indicators on correct choices
+  if (selectedOpt.ok) {
+    const actLower = actionId.toLowerCase();
+    if (actLower.includes("oxygen") || actLower.includes("mask") || actLower.includes("inhale") || actLower.includes("intubation") || actLower.includes("adg")) {
+      bed.has_oxygen = true;
+    }
+    if (actLower.includes("fluid") || actLower.includes("drip") || actLower.includes("iv") || actLower.includes("infusion") || actLower.includes("abx") || actLower.includes("ceftriaxone") || actLower.includes("piptazo") || actLower.includes("steroid") || actLower.includes("adrenaline") || actLower.includes("hydrocortisone") || actLower.includes("noradrenaline")) {
+      bed.has_iv = true;
+    }
+  }
   
   if (selectedOpt.ok) {
     player.score += 50;
@@ -1037,6 +1242,8 @@ function performAction(bedId, actionId) {
       bed.status = "stable";
       bed.diagnosis = evt.diagnosis; // ここで確定診断名を表示！
       bed.active_event = null;
+      bed.has_oxygen = false;
+      bed.has_iv = false;
       
       const bonus = isNurseCall ? 10 : 30;
       player.score += bonus;
@@ -1114,6 +1321,161 @@ function renderGame() {
   updateAudioEngine();
 }
 
+// --- DYNAMIC ISOMETRIC MICRO-ROOM BUILDER ---
+function buildMicroRoom(bedId, bed) {
+  const sh = (cx, cy, rx) => `<ellipse cx="${cx}" cy="${cy}" rx="${rx}" ry="${rx * 0.32}" fill="rgba(10, 16, 26, 0.4)"/>`;
+  const v = bed.vitals || {};
+  
+  // Parse patient demographic from name string
+  const patientStr = bed.patient || "";
+  let sex = "M";
+  if (patientStr.includes("女") || patientStr.includes("女性") || patientStr.includes("F")) {
+    sex = "F";
+  }
+  
+  let ageGroup = "adult";
+  if (patientStr.includes("小児") || patientStr.includes("子供") || (patientStr.includes("歳") && parseInt(patientStr) < 15)) {
+    ageGroup = "child";
+  } else if (patientStr.includes("高齢者") || (patientStr.includes("歳") && parseInt(patientStr.match(/\d+/)) >= 65)) {
+    ageGroup = "elderly";
+  }
+  
+  const hairColor = ageGroup === "elderly" ? "#a8a8a8" : "#503824";
+  const headRadius = ageGroup === "child" ? 10 : 12.5;
+  
+  // Face & Neck Color / Class
+  let faceColor = "#ffd9b8";
+  let faceClass = "";
+  let neckColor = "#ffd2ad";
+  
+  const isArrest = v.hr === 0 || v.spo2 === 0;
+  const isDanger = bed.status === "danger" || v.spo2 < 90;
+  
+  if (isArrest) {
+    faceColor = "#8ca3c7"; // Dead pale
+    neckColor = "#7e94b8";
+  } else if (isDanger) {
+    // Flashing cyanosis class defined in CSS
+    faceClass = "face-cyanosis";
+  }
+  
+  // Base Scene (Room Background)
+  let svg = `<svg viewBox="0 0 400 240" class="micro-room-svg" preserveAspectRatio="xMidYMid meet">
+    <!-- Floors & Walls -->
+    <polygon points="200,60 384,150 200,240 16,150" fill="#0f172a"/>
+    <polygon points="16,150 200,60 200,10 16,100" fill="#1e293b"/>
+    <polygon points="200,60 384,150 384,100 200,10" fill="#111827"/>
+    <polygon points="200,60 384,150 200,240 16,150" fill="none" stroke="#334155" stroke-width="1"/>
+    
+    <!-- Floor grid lines for aesthetic -->
+    <polyline points="108,105 292,195" stroke="#1e293b" stroke-width="0.8"/>
+    <polyline points="292,105 108,195" stroke="#1e293b" stroke-width="0.8"/>
+  `;
+  
+  // Oxygen Tank (O2)
+  if (bed.has_oxygen) {
+    svg += `<g>
+      ${sh(90, 145, 12)}
+      <rect x="83" y="100" width="14" height="42" rx="6" fill="#0d9488"/>
+      <rect x="86" y="93" width="8" height="8" rx="2" fill="#2dd4bf"/>
+      <circle cx="90" cy="90" r="3" fill="#99f6e4"/>
+    </g>`;
+  }
+  
+  // IV Pole & Bag (IV)
+  if (bed.has_iv) {
+    svg += `<g>
+      ${sh(125, 142, 9)}
+      <rect x="123" y="65" width="4" height="75" fill="#475569"/>
+      <rect x="114" y="60" width="22" height="15" rx="3" fill="#2563eb"/>
+      <rect x="118" y="63" width="14" height="9" rx="2" fill="#dbeafe"/>
+      <path d="M125 75 q-3 8 0 14" stroke="#dbeafe" stroke-width="1.2" fill="none"/>
+    </g>`;
+  }
+  
+  // Bed Frame & Pillow
+  svg += `<g>
+    ${sh(220, 175, 80)}
+    <!-- Bed base structure -->
+    <polygon points="148,108 174,142 174,172 148,138" fill="#1e293b"/>
+    <polygon points="174,142 306,122 306,152 174,172" fill="#334155"/>
+    <polygon points="148,108 284,88 306,122 174,142" fill="#0f172a"/>
+    <ellipse cx="183" cy="119" rx="18" ry="9.5" fill="#1e293b"/>
+  </g>`;
+  
+  // Blanket
+  const blanketColor = "#1e293b";
+  const blanketStroke = bed.status === "danger" ? "#f43f5e" : bed.status === "warning" ? "#fbbf24" : "#3b82f6";
+  
+  if (ageGroup === "child") {
+    svg += `<path d="M196 132 C204 116 234 108 260 112 C272 114 272 122 262 126 C238 135 218 139 207 139 C198 139 192 137 196 132 Z" fill="${blanketColor}" stroke="${blanketStroke}" stroke-width="1.5"/>
+      <path d="M212 125 C228 119 244 116 258 118" stroke="#334155" stroke-width="1" fill="none"/>`;
+  } else {
+    svg += `<path d="M196 132 C206 112 252 100 288 106 C302 109 302 119 291 124 C258 136 222 141 207 141 C198 141 192 138 196 132 Z" fill="${blanketColor}" stroke="${blanketStroke}" stroke-width="1.5"/>
+      <path d="M214 124 C236 116 262 112 284 114" stroke="#334155" stroke-width="1" fill="none"/>`;
+  }
+  
+  // Patient Head & Body
+  svg += `<path d="M190 124 q6 4 12 6 l-3 7 q-8 -2 -12 -7 Z" fill="${neckColor}" class="${faceClass}"/>
+    <circle cx="183" cy="116" r="${headRadius}" fill="${faceColor}" class="${faceClass}"/>`;
+  
+  // Patient Hair
+  if (sex === "F") {
+    svg += `<path d="M168 114 q15 -19 30 -1 q-2 -13 -15 -13 q-13 0 -15 14 Z" fill="${hairColor}"/>
+      <path d="M170 117 q-8 13 -3 31 q11 -1 11 -15 q-1 -11 -8 -16 Z" fill="${hairColor}"/>`;
+  } else {
+    svg += `<path d="M171 115 q12 -16 24 -1 q-3 -11 -12 -11 q-9 0 -12 12 Z" fill="${hairColor}"/>`;
+  }
+  
+  // Facial features
+  svg += `<g>`;
+  if (isArrest) {
+    svg += `
+      <line x1="177" y1="115" x2="181" y2="115" stroke="#1e293b" stroke-width="1.5" stroke-linecap="round"/>
+      <line x1="185" y1="115" x2="189" y2="115" stroke="#1e293b" stroke-width="1.5" stroke-linecap="round"/>
+      <line x1="178" y1="122" x2="188" y2="122" stroke="#475569" stroke-width="1.5" stroke-linecap="round"/>
+    `;
+  } else if (bed.status === "warning" || bed.status === "danger") {
+    svg += `
+      <line x1="175" y1="111" x2="181" y2="109" stroke="#1e293b" stroke-width="1.2" stroke-linecap="round"/>
+      <line x1="190" y1="111" x2="184" y2="109" stroke="#1e293b" stroke-width="1.2" stroke-linecap="round"/>
+      <path d="M176 116 L181 114" stroke="#1e293b" stroke-width="1.8" stroke-linecap="round"/>
+      <path d="M189 116 L184 114" stroke="#1e293b" stroke-width="1.8" stroke-linecap="round"/>
+      <ellipse cx="183" cy="122" rx="2.5" ry="2.2" fill="#581c1c" stroke="#9a5b4a" stroke-width="0.8"/>
+      <path d="M188 106 Q189 110 188 112 Q187 110 188 106 Z" class="sweat-drop"/>
+      <path d="M174 109 Q175 113 174 115 Q173 113 174 109 Z" class="sweat-drop" style="animation-delay: 0.7s;"/>
+    `;
+  } else {
+    svg += `
+      <path d="M175 110 Q179 109 182 111" stroke="#1e293b" stroke-width="0.8" fill="none"/>
+      <path d="M183 111 Q186 109 190 110" stroke="#1e293b" stroke-width="0.8" fill="none"/>
+      <path d="M176 114 q3 1.8 6 0" stroke="#1e293b" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+      <path d="M184 114 q3 1.8 6 0" stroke="#1e293b" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+      <path d="M179 121 Q183 123 187 121" stroke="#9a5b4a" stroke-width="1.2" fill="none" stroke-linecap="round"/>
+    `;
+  }
+  svg += `</g>`;
+  
+  // Treatment mask overlay
+  if (bed.has_oxygen) {
+    svg += `<ellipse cx="183" cy="121" rx="6.5" ry="5.5" fill="rgba(45, 212, 191, 0.45)" stroke="#2dd4bf" stroke-width="1.2"/>
+      <path d="M90 120 Q130 150 180 123" stroke="rgba(45, 212, 191, 0.45)" stroke-width="1.2" fill="none" stroke-dasharray="2 2"/>`;
+  }
+  
+  // IV Line tube overlay
+  if (bed.has_iv) {
+    svg += `<path d="M125 75 Q145 110 205 127" stroke="rgba(255, 255, 255, 0.55)" stroke-width="1" fill="none"/>`;
+  }
+  
+  svg += `
+    <circle cx="174" cy="172" r="3.5" fill="#334155"/>
+    <circle cx="306" cy="152" r="3.5" fill="#334155"/>
+    <circle cx="148" cy="138" r="3.5" fill="#334155"/>
+  </svg>`;
+  
+  return svg;
+}
+
 function renderBeds() {
   wardGrid.innerHTML = '';
   
@@ -1128,34 +1490,25 @@ function renderBeds() {
     
     // Vitals display mapping
     const v = bed.vitals;
-    const hrVal = v.hr > 0 ? `${v.hr} bpm` : '0 (---)';
-    const bpVal = v.bp_sys > 0 ? `${v.bp_sys}/${v.bp_dia}` : '0/0';
-    const spo2Val = v.spo2 > 0 ? `${v.spo2}%` : '0% (---)';
     
     // Heart pulse icon class
     const heartPulseHtml = v.hr > 0 ? '<span class="v-pulse-heart">❤️</span>' : '<span style="color:var(--danger)">💔</span>';
 
-    // ECG wave logic
     let ecgClass = 'stable';
-    let ecgPathD = "M0,20 L30,20 Q35,17 40,20 T45,20 L50,12 L54,36 L58,20 L64,20 Q70,15 76,20 T82,20 L150,20 L180,20 Q185,17 190,20 T195,20 L200,12 L204,36 L208,20 L214,20 Q220,15 226,20 T232,20 L300,20"; // normal loop
     let alertBadgeHtml = '';
 
     if (bed.active_event && (v.hr === 0 || v.spo2 === 0)) {
       ecgClass = 'flatline';
-      ecgPathD = "M0,20 L300,20";
       alertBadgeHtml = '<div class="monitor-alert-badge">⚠️ FLATLINE</div>';
     } else if (bed.status === 'danger') {
       ecgClass = 'danger';
       let alertMsg = '⚠️ CRITICAL';
       if (v.hr > 130) {
         alertMsg = '⚠️ TACHYCARDIA';
-        ecgPathD = "M0,20 L15,20 Q18,17 21,20 T24,20 L27,10 L30,36 L33,20 L37,20 Q41,15 45,20 T49,20 L75,20 Q78,17 81,20 T84,20 L87,10 L90,36 L93,20 L97,20 Q101,15 105,20 T109,20 L135,20 Q138,17 141,20 T144,20 L147,10 L150,36 L153,20 L157,20 Q161,15 165,20 T169,20 L195,20 Q198,17 201,20 T204,20 L207,10 L210,36 L213,20 L217,20 Q221,15 225,20 T229,20 L255,20 Q258,17 261,20 T264,20 L267,10 L270,36 L273,20 L277,20 Q281,15 285,20 T289,20 L300,20";
       } else if (v.hr < 45) {
         alertMsg = '⚠️ BRADYCARDIA';
-        ecgPathD = "M0,20 L60,20 Q65,17 70,20 T75,20 L80,12 L84,36 L88,20 L94,20 Q100,15 106,20 T112,20 L300,20";
       } else if (v.bp_sys < 80) {
         alertMsg = '⚠️ SHOCK';
-        ecgPathD = "M0,20 L10,12 L20,30 L30,10 L40,32 L50,15 L60,28 L70,12 L80,30 L90,10 L100,32 L110,15 L120,28 L130,12 L140,30 L150,10 L160,32 L170,15 L180,28 L190,12 L200,30 L210,10 L220,32 L230,15 L240,28 L250,12 L260,30 L270,10 L280,32 L290,15 L300,20"; // VF
       } else if (v.spo2 < 85) {
         alertMsg = '⚠️ DESAT';
       }
@@ -1169,7 +1522,6 @@ function renderBeds() {
         alertMsg = '⚠️ SPO2 LOW';
       }
       alertBadgeHtml = `<div class="monitor-alert-badge">${alertMsg}</div>`;
-      ecgPathD = "M0,20 L15,20 Q18,17 21,20 T24,20 L27,10 L30,36 L33,20 L37,20 Q41,15 45,20 T49,20 L75,20 Q78,17 81,20 T84,20 L87,10 L90,36 L93,20 L97,20 Q101,15 105,20 T109,20 L135,20 Q138,17 141,20 T144,20 L147,10 L150,36 L153,20 L157,20 Q161,15 165,20 T169,20 L195,20 Q198,17 201,20 T204,20 L207,10 L210,36 L213,20 L217,20 Q221,15 225,20 T229,20 L255,20 Q258,17 261,20 T264,20 L267,10 L270,36 L273,20 L277,20 Q281,15 285,20 T289,20 L300,20";
     }
     
     // Action panel / Event info
@@ -1230,7 +1582,7 @@ function renderBeds() {
     const displayDiag = evt ? `${evt.complaint}疑い` : bed.diagnosis;
 
     card.innerHTML = `
-      <!-- Left: Bio -->
+      <!-- Left: Bio & 2.5D Isometric Room -->
       <div class="bed-bio">
         <div class="bed-header">
           <span class="bed-id">${bedId}号室</span>
@@ -1238,29 +1590,50 @@ function renderBeds() {
         </div>
         <div class="patient-name">${escapeHtml(bed.patient)}</div>
         <div class="patient-diag">${escapeHtml(displayDiag)}</div>
+        
+        <!-- 2.5D Micro-Room -->
+        <div class="micro-room-container">
+          ${buildMicroRoom(bedId, bed)}
+        </div>
       </div>
       
-      <!-- Middle: Vitals Monitor -->
+      <!-- Middle: Vitals Monitor (4-Quadrant & Canvas) -->
       <div class="vital-monitor">
-        <div class="vital-row">
-          <span class="vital-label">心拍数 (HR)</span>
-          <span class="vital-value v-hr">${heartPulseHtml} ${hrVal}</span>
+        <div class="vital-grid">
+          <!-- HR (Neon Green) -->
+          <div class="vital-cell c-ecg">
+            <span class="v-label">HR (bpm)</span>
+            <span class="v-val">${v.hr > 0 ? v.hr : '---'} ${heartPulseHtml}</span>
+            <span class="v-sub">ECG</span>
+          </div>
+          
+          <!-- BP (Neon Red) -->
+          <div class="vital-cell c-art">
+            <span class="v-label">BP (mmHg)</span>
+            <span class="v-val">${v.bp_sys > 0 ? `${v.bp_sys}/${v.bp_dia}` : '---/---'}</span>
+            <span class="v-sub">Art</span>
+          </div>
+          
+          <!-- SpO2 (Neon Blue) -->
+          <div class="vital-cell c-pleth">
+            <span class="v-label">SpO2 (%)</span>
+            <span class="v-val">${v.spo2 > 0 ? v.spo2 : '---'}%</span>
+            <span class="v-sub">Pleth</span>
+          </div>
+          
+          <!-- RR (Neon Yellow) -->
+          <div class="vital-cell c-resp">
+            <span class="v-label">RR (rpm)</span>
+            <span class="v-val">${v.rr > 0 ? v.rr : '0'}</span>
+            <span class="v-sub">Resp</span>
+          </div>
         </div>
-        <div class="vital-row">
-          <span class="vital-label">血圧 (BP)</span>
-          <span class="vital-value v-bp">⚡ ${bpVal}</span>
+        
+        <!-- Waveform Canvas -->
+        <div class="waveform-container">
+          <canvas id="canvas-wf-${bedId}" class="waveform-canvas"></canvas>
         </div>
-        <div class="vital-row">
-          <span class="vital-label">酸素飽和度 (SpO2)</span>
-          <span class="vital-value v-spo2">💨 ${spo2Val}</span>
-        </div>
-        <!-- ECG Graph -->
-        <div class="ecg-container ${ecgClass}">
-          <div class="ecg-grid-bg"></div>
-          <svg class="ecg-svg" viewBox="0 0 300 40" preserveAspectRatio="none">
-            <path class="ecg-path" d="${ecgPathD}"></path>
-          </svg>
-        </div>
+        
         ${alertBadgeHtml}
       </div>
       
