@@ -495,6 +495,100 @@ h1, h2, h3 {
   100% { transform: scale(1.2); }
 }
 
+/* ECG WAVEFORM ANIMATIONS */
+.ecg-container {
+  position: relative;
+  width: 100%;
+  height: 48px;
+  background: rgba(0, 0, 0, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 6px;
+  overflow: hidden;
+  margin-top: 0.5rem;
+}
+
+.ecg-svg {
+  width: 100%;
+  height: 100%;
+}
+
+.ecg-path {
+  fill: none;
+  stroke: var(--success); /* Green for stable */
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  
+  /* SVG scrolling animation */
+  stroke-dasharray: 1000;
+  stroke-dashoffset: 1000;
+  animation: ecg-sweep 3s linear infinite;
+}
+
+/* danger state waveforms (fast/VF or flatline) */
+.ecg-container.danger .ecg-path {
+  stroke: var(--danger);
+  animation-duration: 1.2s; /* Fast rhythm */
+}
+
+/* flatline state */
+.ecg-container.flatline .ecg-path {
+  stroke: var(--danger);
+  animation: ecg-flatline 5s linear infinite;
+}
+
+/* warning state (moderately fast) */
+.ecg-container.warning .ecg-path {
+  stroke: var(--warning);
+  animation-duration: 2s;
+}
+
+@keyframes ecg-sweep {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes ecg-flatline {
+  0% { stroke-dashoffset: 1000; }
+  100% { stroke-dashoffset: 0; }
+}
+
+/* ECG grid lines */
+.ecg-grid-bg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image: 
+    linear-gradient(rgba(0, 255, 102, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 255, 102, 0.04) 1px, transparent 1px);
+  background-size: 8px 8px;
+  pointer-events: none;
+}
+
+/* alarm badge on vital card */
+.monitor-alert-badge {
+  font-family: monospace;
+  font-size: 0.7rem;
+  font-weight: 900;
+  color: #fff;
+  background: var(--danger);
+  padding: 0.15rem 0.4rem;
+  border-radius: 3px;
+  text-shadow: 0 0 4px rgba(255,255,255,0.6);
+  animation: alarm-pulse-bg 0.6s infinite alternate;
+  display: inline-block;
+  margin-top: 0.25rem;
+  text-transform: uppercase;
+}
+
+@keyframes alarm-pulse-bg {
+  0% { background-color: var(--danger); box-shadow: 0 0 5px rgba(239, 68, 68, 0.5); }
+  100% { background-color: #7f1d1d; box-shadow: 0 0 0px rgba(239, 68, 68, 0); }
+}
+
 /* Right Col: Emergencies / Action panel */
 .bed-actions-panel {
   display: flex;
@@ -1096,6 +1190,33 @@ h1, h2, h3 {
   transform: rotate(45deg) scale(1.05);
   border-color: var(--primary);
   box-shadow: 0 0 15px var(--primary-glow);
+}
+
+.btn-sound-toggle {
+  position: fixed;
+  top: 1.5rem;
+  right: 5rem;
+  z-index: 1000;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: rgba(16, 24, 43, 0.85);
+  border: 1px solid var(--border-light);
+  color: #fff;
+  font-size: 1.3rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(8px);
+  transition: all 0.3s ease;
+}
+
+.btn-sound-toggle:hover {
+  transform: scale(1.05);
+  border-color: var(--success);
+  box-shadow: 0 0 15px rgba(16, 185, 129, 0.4);
 }
 
 .settings-drawer {

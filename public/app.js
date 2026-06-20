@@ -58,6 +58,199 @@ const gameTimer = document.getElementById('game-timer');
 const safetyGauge = document.getElementById('safety-gauge');
 const safetyValue = document.getElementById('safety-value');
 
+// --- AUDIO SOUND SYSTEM ---
+const btnSoundToggle = document.getElementById('btn-sound-toggle');
+
+const AudioMonitor = {
+  ctx: null,
+  soundEnabled: false,
+  alarmInterval: null,
+  heartbeatTimeout: null,
+  targetHR: 75,
+  currentAlarmLevel: 'stable',
+  flatlineOsc: null,
+  flatlineGain: null,
+  
+  init() {
+    if (this.ctx) return;
+    try {
+      this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+    } catch (e) {
+      console.error("Web Audio API not supported", e);
+    }
+  },
+  
+  toggle() {
+    this.init();
+    this.soundEnabled = !this.soundEnabled;
+    if (this.soundEnabled && this.ctx.state === 'suspended') {
+      this.ctx.resume();
+    }
+    
+    if (btnSoundToggle) {
+      btnSoundToggle.innerText = this.soundEnabled ? '🔊' : '🔇';
+      btnSoundToggle.title = this.soundEnabled ? 'サウンドON' : 'サウンドOFF';
+    }
+    
+    if (this.soundEnabled) {
+      this.startHeartbeatLoop();
+    } else {
+      this.stopAlarm();
+      this.stopHeartbeatLoop();
+    }
+  },
+  
+  playHeartbeat(frequency = 800, duration = 0.08, volume = 0.03) {
+    if (!this.soundEnabled || !this.ctx) return;
+    try {
+      const osc = this.ctx.createOscillator();
+      const gainNode = this.ctx.createGain();
+      
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(frequency, this.ctx.currentTime);
+      
+      gainNode.gain.setValueAtTime(volume, this.ctx.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.0001, this.ctx.currentTime + duration);
+      
+      osc.connect(gainNode);
+      gainNode.connect(this.ctx.destination);
+      
+      osc.start();
+      osc.stop(this.ctx.currentTime + duration);
+    } catch (e) {
+      console.warn("Heartbeat sound error:", e);
+    }
+  },
+  
+  startHeartbeatLoop() {
+    if (this.heartbeatTimeout) return;
+    
+    const run = () => {
+      if (!this.soundEnabled || !this.ctx) {
+        this.heartbeatTimeout = null;
+        return;
+      }
+      
+      if (this.targetHR > 0) {
+        const freq = this.targetHR > 120 ? 900 : 750;
+        const vol = this.targetHR > 120 ? 0.04 : 0.02;
+        this.playHeartbeat(freq, 0.08, vol);
+      }
+      
+      const interval = this.targetHR > 0 ? (60000 / this.targetHR) : 2000;
+      this.heartbeatTimeout = setTimeout(run, interval);
+    };
+    
+    run();
+  },
+  
+  stopHeartbeatLoop() {
+    if (this.heartbeatTimeout) {
+      clearTimeout(this.heartbeatTimeout);
+      this.heartbeatTimeout = null;
+    }
+  },
+  
+  updateAlarmState(dangerLevel) {
+    if (!this.soundEnabled || !this.ctx) {
+      this.stopAlarm();
+      return;
+    }
+    
+    if (this.currentAlarmLevel === dangerLevel) return;
+    
+    this.stopAlarm();
+    this.currentAlarmLevel = dangerLevel;
+    
+    if (dangerLevel === 'flatline') {
+      try {
+        this.flatlineOsc = this.ctx.createOscillator();
+        this.flatlineGain = this.ctx.createGain();
+        this.flatlineOsc.type = 'sine';
+        this.flatlineOsc.frequency.setValueAtTime(523.25, this.ctx.currentTime); // C5
+        this.flatlineGain.gain.setValueAtTime(0.04, this.ctx.currentTime);
+        this.flatlineOsc.connect(this.flatlineGain);
+        this.flatlineGain.connect(this.ctx.destination);
+        this.flatlineOsc.start();
+      } catch (e) {}
+    } else if (dangerLevel === 'danger') {
+      let isBeep = false;
+      this.alarmInterval = setInterval(() => {
+        isBeep = !isBeep;
+        if (isBeep) {
+          this.playHeartbeat(987.77, 0.25, 0.06); // B5, 0.25s
+        }
+      }, 350);
+    } else if (dangerLevel === 'warning') {
+      let isBeep = false;
+      this.alarmInterval = setInterval(() => {
+        isBeep = !isBeep;
+        if (isBeep) {
+          this.playHeartbeat(659.25, 0.2, 0.04); // E5, 0.2s
+        }
+      }, 500);
+    }
+  },
+  
+  stopAlarm() {
+    if (this.alarmInterval) {
+      clearInterval(this.alarmInterval);
+      this.alarmInterval = null;
+    }
+    if (this.flatlineOsc) {
+      try {
+        this.flatlineOsc.stop();
+      } catch (e) {}
+      this.flatlineOsc = null;
+    }
+    this.flatlineGain = null;
+    this.currentAlarmLevel = 'stable';
+  }
+};
+
+if (btnSoundToggle) {
+  btnSoundToggle.addEventListener('click', () => {
+    AudioMonitor.toggle();
+  });
+}
+
+function updateAudioEngine() {
+  if (!AudioMonitor.soundEnabled) return;
+  
+  let maxDangerLevel = 'stable';
+  let highestHR = 70;
+  let hasFlatline = false;
+  
+  if (currentGameState.status === "PLAYING" && currentGameState.beds) {
+    Object.values(currentGameState.beds).forEach(bed => {
+      const v = bed.vitals;
+      
+      if (bed.active_event && (v.hr === 0 || v.spo2 === 0)) {
+        hasFlatline = true;
+      }
+      
+      if (bed.status === 'danger') {
+        maxDangerLevel = 'danger';
+      } else if (bed.status === 'warning' && maxDangerLevel !== 'danger') {
+        maxDangerLevel = 'warning';
+      }
+      
+      if (bed.active_event && v.hr > highestHR) {
+        highestHR = v.hr;
+      }
+    });
+  }
+  
+  if (hasFlatline) {
+    AudioMonitor.targetHR = 0;
+    AudioMonitor.updateAlarmState('flatline');
+  } else {
+    AudioMonitor.targetHR = highestHR;
+    AudioMonitor.updateAlarmState(maxDangerLevel);
+  }
+}
+
+
 // Beds Container
 const wardGrid = document.getElementById('ward-grid');
 const logFeed = document.getElementById('log-feed');
@@ -299,6 +492,8 @@ function updateState(newState) {
   } else {
     if (newState.status === "LOBBY") {
       switchScreen('lobby');
+      AudioMonitor.stopAlarm();
+      AudioMonitor.stopHeartbeatLoop();
       if (currentUserData) {
         renderDashboard(currentUserData);
       }
@@ -307,6 +502,8 @@ function updateState(newState) {
       renderGame();
     } else if (newState.status === "RESULT") {
       switchScreen('result');
+      AudioMonitor.stopAlarm();
+      AudioMonitor.stopHeartbeatLoop();
       renderResult();
     }
   }
@@ -913,6 +1110,7 @@ function renderGame() {
   
   // Ensure connection badges are correct in game header
   updateConnectionBadges();
+  updateAudioEngine();
 }
 
 function renderBeds() {
@@ -935,6 +1133,43 @@ function renderBeds() {
     
     // Heart pulse icon class
     const heartPulseHtml = v.hr > 0 ? '<span class="v-pulse-heart">❤️</span>' : '<span style="color:var(--danger)">💔</span>';
+
+    // ECG wave logic
+    let ecgClass = 'stable';
+    let ecgPathD = "M0,20 L30,20 Q35,17 40,20 T45,20 L50,12 L54,36 L58,20 L64,20 Q70,15 76,20 T82,20 L150,20 L180,20 Q185,17 190,20 T195,20 L200,12 L204,36 L208,20 L214,20 Q220,15 226,20 T232,20 L300,20"; // normal loop
+    let alertBadgeHtml = '';
+
+    if (bed.active_event && (v.hr === 0 || v.spo2 === 0)) {
+      ecgClass = 'flatline';
+      ecgPathD = "M0,20 L300,20";
+      alertBadgeHtml = '<div class="monitor-alert-badge">⚠️ FLATLINE</div>';
+    } else if (bed.status === 'danger') {
+      ecgClass = 'danger';
+      let alertMsg = '⚠️ CRITICAL';
+      if (v.hr > 130) {
+        alertMsg = '⚠️ TACHYCARDIA';
+        ecgPathD = "M0,20 L15,20 Q18,17 21,20 T24,20 L27,10 L30,36 L33,20 L37,20 Q41,15 45,20 T49,20 L75,20 Q78,17 81,20 T84,20 L87,10 L90,36 L93,20 L97,20 Q101,15 105,20 T109,20 L135,20 Q138,17 141,20 T144,20 L147,10 L150,36 L153,20 L157,20 Q161,15 165,20 T169,20 L195,20 Q198,17 201,20 T204,20 L207,10 L210,36 L213,20 L217,20 Q221,15 225,20 T229,20 L255,20 Q258,17 261,20 T264,20 L267,10 L270,36 L273,20 L277,20 Q281,15 285,20 T289,20 L300,20";
+      } else if (v.hr < 45) {
+        alertMsg = '⚠️ BRADYCARDIA';
+        ecgPathD = "M0,20 L60,20 Q65,17 70,20 T75,20 L80,12 L84,36 L88,20 L94,20 Q100,15 106,20 T112,20 L300,20";
+      } else if (v.bp_sys < 80) {
+        alertMsg = '⚠️ SHOCK';
+        ecgPathD = "M0,20 L10,12 L20,30 L30,10 L40,32 L50,15 L60,28 L70,12 L80,30 L90,10 L100,32 L110,15 L120,28 L130,12 L140,30 L150,10 L160,32 L170,15 L180,28 L190,12 L200,30 L210,10 L220,32 L230,15 L240,28 L250,12 L260,30 L270,10 L280,32 L290,15 L300,20"; // VF
+      } else if (v.spo2 < 85) {
+        alertMsg = '⚠️ DESAT';
+      }
+      alertBadgeHtml = `<div class="monitor-alert-badge">${alertMsg}</div>`;
+    } else if (bed.status === 'warning') {
+      ecgClass = 'warning';
+      let alertMsg = '⚠️ WARNING';
+      if (v.hr > 115) {
+        alertMsg = '⚠️ HR HIGH';
+      } else if (v.spo2 < 92) {
+        alertMsg = '⚠️ SPO2 LOW';
+      }
+      alertBadgeHtml = `<div class="monitor-alert-badge">${alertMsg}</div>`;
+      ecgPathD = "M0,20 L15,20 Q18,17 21,20 T24,20 L27,10 L30,36 L33,20 L37,20 Q41,15 45,20 T49,20 L75,20 Q78,17 81,20 T84,20 L87,10 L90,36 L93,20 L97,20 Q101,15 105,20 T109,20 L135,20 Q138,17 141,20 T144,20 L147,10 L150,36 L153,20 L157,20 Q161,15 165,20 T169,20 L195,20 Q198,17 201,20 T204,20 L207,10 L210,36 L213,20 L217,20 Q221,15 225,20 T229,20 L255,20 Q258,17 261,20 T264,20 L267,10 L270,36 L273,20 L277,20 Q281,15 285,20 T289,20 L300,20";
+    }
     
     // Action panel / Event info
     let actionsPanelHtml = '';
@@ -1018,6 +1253,14 @@ function renderBeds() {
           <span class="vital-label">酸素飽和度 (SpO2)</span>
           <span class="vital-value v-spo2">💨 ${spo2Val}</span>
         </div>
+        <!-- ECG Graph -->
+        <div class="ecg-container ${ecgClass}">
+          <div class="ecg-grid-bg"></div>
+          <svg class="ecg-svg" viewBox="0 0 300 40" preserveAspectRatio="none">
+            <path class="ecg-path" d="${ecgPathD}"></path>
+          </svg>
+        </div>
+        ${alertBadgeHtml}
       </div>
       
       <!-- Right: Action Panel -->
