@@ -217,7 +217,7 @@ function doGet(e) {
                       "<div style='background: rgba(255,255,255,0.05); display: inline-block; padding: 40px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1);'>" +
                       "<h2 style='color: #22c55e; margin-bottom: 10px;'>✓ 認証成功</h2>" +
                       "<p style='font-size: 1.1rem; margin-bottom: 20px;'>Google アカウント (" + email + ") の連携に成功しました。</p>" +
-                      "<p style='color: #94a3b8; font-size: 0.9rem;'>このウィンドウは自動的に閉じます。ゲーム画面に戻ってください。</p>" +
+                      "<p style='color: #94a3b8; font-size: 0.9rem;'>2秒後にこのウィンドウは自動的に閉じます。ゲーム画面に戻ってください。</p>" +
                       "</div>" +
                       "<script>" +
                       "  var dataToSend = " + JSON.stringify(userRecord) + ";" +

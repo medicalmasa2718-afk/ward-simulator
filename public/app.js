@@ -715,7 +715,7 @@ async function startGoogleLoginFlow() {
   
   showLobbySubPanel('loading');
   
-  loginCheckInterval = setInterval(async () => {
+  loginCheckInterval = setInterval(() => {
     if (authWindow && authWindow.closed) {
       clearInterval(loginCheckInterval);
       loginCheckInterval = null;
@@ -723,20 +723,27 @@ async function startGoogleLoginFlow() {
       return;
     }
     
-    try {
-      const checkUrl = `${gasUrl}?action=login_check&t=${Date.now()}`;
-      const res = await fetchWithTimeout(checkUrl, { mode: 'cors' });
-      const data = await res.json();
+    // JSONP polling to avoid CORS blocking during check
+    const oldPollScript = document.getElementById('gas-jsonp-poll');
+    if (oldPollScript) oldPollScript.remove();
+    
+    window.handlePollResponse = (data) => {
       if (data && data.status !== "unauthenticated") {
         if (authWindow) authWindow.close();
         clearInterval(loginCheckInterval);
         loginCheckInterval = null;
         checkAutoLogin();
       }
-    } catch (e) {
-      // ignore
-    }
-  }, 1500);
+    };
+    
+    const script = document.createElement('script');
+    script.id = 'gas-jsonp-poll';
+    script.src = `${gasUrl}?action=login_check&callback=handlePollResponse&t=${Date.now()}`;
+    script.onerror = () => {
+      // Ignore errors before auth is granted
+    };
+    document.body.appendChild(script);
+  }, 2000);
 }
 
 async function saveUserScore() {
