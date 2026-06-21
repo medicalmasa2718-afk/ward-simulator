@@ -34,12 +34,21 @@ const screens = {
 };
 
 const lobbyLoading = document.getElementById('lobby-loading');
-const lobbyAuthRequired = document.getElementById('lobby-auth-required');
+const lobbyEmailEntry = document.getElementById('lobby-email-entry');
+const lobbyCodeEntry = document.getElementById('lobby-code-entry');
 const lobbyRegistrationPanel = document.getElementById('lobby-registration-panel');
+
+const userEmailInput = document.getElementById('user-email');
+const otpCodeInput = document.getElementById('otp-code');
 const regUsernameInput = document.getElementById('reg-username');
+
+const btnSendOtp = document.getElementById('btn-send-otp');
+const btnVerifyOtp = document.getElementById('btn-verify-otp');
+const btnBackToEmail = document.getElementById('btn-back-to-email');
 const btnRegisterName = document.getElementById('btn-register-name');
-const btnGoogleLogin = document.getElementById('btn-google-login');
+
 const lobbyWaiting = document.getElementById('lobby-waiting');
+const otpHintText = document.getElementById('otp-hint-text');
 
 // Settings Drawer DOM Elements
 const btnSettingsToggle = document.getElementById('btn-settings-toggle');
@@ -512,7 +521,8 @@ async function init() {
 
 function showLobbySubPanel(panelId) {
   if (lobbyLoading) lobbyLoading.style.display = panelId === 'loading' ? 'block' : 'none';
-  if (lobbyAuthRequired) lobbyAuthRequired.style.display = panelId === 'auth' ? 'block' : 'none';
+  if (lobbyEmailEntry) lobbyEmailEntry.style.display = panelId === 'email' ? 'block' : 'none';
+  if (lobbyCodeEntry) lobbyCodeEntry.style.display = panelId === 'code' ? 'block' : 'none';
   if (lobbyRegistrationPanel) lobbyRegistrationPanel.style.display = panelId === 'register' ? 'block' : 'none';
   if (lobbyWaiting) lobbyWaiting.style.display = panelId === 'waiting' ? 'block' : 'none';
 }
@@ -537,78 +547,30 @@ function recordStats(caseId, tried, correct) {
   }).catch(e => console.error(e));
 }
 
-window.addEventListener('message', (event) => {
-  if (event.data && event.data.type === 'AUTH_SUCCESS') {
-    const userData = event.data.data;
-    handleAuthSuccess(userData);
-  }
-});
-
-function handleAuthSuccess(data) {
-  isGasActive = true;
-  updateConnectionBadges();
-  
-  const user = {
-    email: data.email,
-    name: data.name || "匿名医師",
-    high_score: parseInt(data.high_score) || 0,
-    completed_cases: Array.isArray(data.completed_cases) 
-      ? data.completed_cases 
-      : (data.completed_cases ? data.completed_cases.split(",") : []),
-    last_played: data.last_played || ""
-  };
-  
-  currentUserData = user;
-  
-  if (loginCheckInterval) {
-    clearInterval(loginCheckInterval);
-    loginCheckInterval = null;
-  }
-  
-  if (data.status === "not_registered" || data.status === "not_found" || user.name === "匿名医師") {
-    showLobbySubPanel('register');
-  } else {
-    hasJoined = true;
-    updateConnectionBadges();
-    showLobbySubPanel('waiting');
-    renderDashboard(user);
-  }
-}
-
-// --- DATABASE SYNC LOGICS (GAS & LocalStorage) ---
-let loginCheckInterval = null;
-
 async function checkAutoLogin(silent = false) {
-  if (!gasUrl) {
-    showLobbySubPanel('auth');
+  const email = localStorage.getItem('session_email');
+  if (!gasUrl || !email) {
+    showLobbySubPanel('email');
     return;
   }
   
   if (!silent) showLobbySubPanel('loading');
 
-  const oldScript = document.getElementById('gas-jsonp-script');
-  if (oldScript) oldScript.remove();
-
-  let timeoutId = null;
-  if (!silent) {
-    timeoutId = setTimeout(() => {
-      console.warn("JSONP login check timed out.");
-      showLobbySubPanel('auth');
-      updateConnectionBadges();
-    }, 10000);
-  }
-
-  window.handleJsonpResponse = (data) => {
-    if (timeoutId) clearTimeout(timeoutId);
+  try {
+    const res = await fetchWithTimeout(`${gasUrl}?action=silent_check&email=${encodeURIComponent(email)}`, {
+      method: 'GET',
+      mode: 'cors'
+    });
+    const data = await res.json();
     
     if (data && data.status === "unauthenticated") {
       isGasActive = true;
-      showLobbySubPanel('auth');
+      showLobbySubPanel('email');
     } else if (data && (data.status === "success" || data.status === "not_registered" || data.status === "not_found")) {
       isGasActive = true;
       
       const user = {
-        email: data.email,
+        email: data.email || email,
         name: data.name || "匿名医師",
         high_score: parseInt(data.high_score) || 0,
         completed_cases: Array.isArray(data.completed_cases) 
@@ -618,11 +580,6 @@ async function checkAutoLogin(silent = false) {
       };
       
       currentUserData = user;
-      
-      if (loginCheckInterval) {
-        clearInterval(loginCheckInterval);
-        loginCheckInterval = null;
-      }
       
       if (data.status === "not_registered" || data.status === "not_found" || user.name === "匿名医師") {
         showLobbySubPanel('register');
@@ -634,22 +591,111 @@ async function checkAutoLogin(silent = false) {
       }
     } else {
       isGasActive = false;
-      showLobbySubPanel('auth');
+      showLobbySubPanel('email');
     }
-    updateConnectionBadges();
-  };
-
-  const script = document.createElement('script');
-  script.id = 'gas-jsonp-script';
-  script.src = `${gasUrl}?action=login_check&callback=handleJsonpResponse&t=${Date.now()}`;
-  script.onerror = () => {
-    if (timeoutId) clearTimeout(timeoutId);
-    console.warn("JSONP script load error - likely unauthenticated.");
+  } catch (e) {
+    console.warn("Auto login check failed:", e);
     isGasActive = false;
-    showLobbySubPanel('auth');
-    updateConnectionBadges();
-  };
-  document.body.appendChild(script);
+    showLobbySubPanel('email');
+  }
+  updateConnectionBadges();
+}
+
+async function sendOtp() {
+  const email = userEmailInput.value.trim().toLowerCase();
+  if (!email) {
+    alert("メールアドレスを入力してください。");
+    return;
+  }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    alert("正しいメールアドレスの形式で入力してください。");
+    return;
+  }
+  
+  showLobbySubPanel('loading');
+  
+  try {
+    const res = await fetchWithTimeout(`${gasUrl}?action=send_otp&email=${encodeURIComponent(email)}`, {
+      method: 'GET',
+      mode: 'cors'
+    });
+    const data = await res.json();
+    
+    if (data && data.status === "success") {
+      isGasActive = true;
+      updateConnectionBadges();
+      
+      if (data.test_code) {
+        otpHintText.innerHTML = `テストアドレスを検知しました。<br>認証コード: <span style="font-size:1.2rem; font-weight:bold; color:var(--warning);">${data.test_code}</span>`;
+      } else {
+        otpHintText.innerText = "メールアドレス宛に6桁の認証コードを送信しました。";
+      }
+      
+      userEmailInput.dataset.currentEmail = email;
+      showLobbySubPanel('code');
+    } else {
+      alert("認証コードの送信に失敗しました: " + (data ? data.message : "不明なエラー"));
+      showLobbySubPanel('email');
+    }
+  } catch (e) {
+    console.error("Failed to send OTP:", e);
+    alert("通信エラーが発生しました。GAS Web App URL が正しいか確認してください。");
+    showLobbySubPanel('email');
+  }
+}
+
+async function verifyOtp() {
+  const email = userEmailInput.dataset.currentEmail;
+  const code = otpCodeInput.value.trim();
+  
+  if (!email || !code || code.length !== 6) {
+    alert("6桁の認証コードを正しく入力してください。");
+    return;
+  }
+  
+  showLobbySubPanel('loading');
+  
+  try {
+    const res = await fetchWithTimeout(`${gasUrl}?action=verify_otp&email=${encodeURIComponent(email)}&code=${encodeURIComponent(code)}`, {
+      method: 'GET',
+      mode: 'cors'
+    });
+    const data = await res.json();
+    
+    if (data && data.status !== "error") {
+      isGasActive = true;
+      updateConnectionBadges();
+      
+      localStorage.setItem('session_email', email);
+      
+      const user = {
+        email: data.email || email,
+        name: data.name || "匿名医師",
+        high_score: parseInt(data.high_score) || 0,
+        completed_cases: Array.isArray(data.completed_cases) 
+          ? data.completed_cases 
+          : (data.completed_cases ? data.completed_cases.split(",") : []),
+        last_played: data.last_played || ""
+      };
+      
+      currentUserData = user;
+      
+      if (data.status === "not_registered" || data.status === "not_found" || user.name === "匿名医師") {
+        showLobbySubPanel('register');
+      } else {
+        hasJoined = true;
+        showLobbySubPanel('waiting');
+        renderDashboard(user);
+      }
+    } else {
+      alert("認証エラー: " + (data ? data.message : "認証コードが正しくないか、有効期限が切れています。"));
+      showLobbySubPanel('code');
+    }
+  } catch (e) {
+    console.error("Failed to verify OTP:", e);
+    alert("通信エラーが発生しました。");
+    showLobbySubPanel('code');
+  }
 }
 
 async function registerUserName() {
@@ -672,7 +718,7 @@ async function registerUserName() {
     try {
       const data = await saveToGas(currentUserData);
       if (data && data.status === "success") {
-        currentUserData.name = data.name; // Keep final name saved by GAS
+        currentUserData.name = data.name;
         hasJoined = true;
         isGasActive = true;
         updateConnectionBadges();
@@ -689,61 +735,8 @@ async function registerUserName() {
     }
   } else {
     alert("セッションが見つかりません。再ログインしてください。");
-    showLobbySubPanel('auth');
+    showLobbySubPanel('email');
   }
-}
-
-async function startGoogleLoginFlow() {
-  if (!gasUrl) {
-    alert("GAS連携URLが設定されていません。⚙️設定から登録してください。");
-    return;
-  }
-  
-  const authUrl = `${gasUrl}?action=auth_trigger`;
-  const width = 600;
-  const height = 650;
-  const left = (screen.width - width) / 2;
-  const top = (screen.height - height) / 2;
-  
-  const authWindow = window.open(
-    authUrl, 
-    'NaikaTouchokuAuthPopup', 
-    `width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=yes,status=yes`
-  );
-  
-  if (loginCheckInterval) clearInterval(loginCheckInterval);
-  
-  showLobbySubPanel('loading');
-  
-  loginCheckInterval = setInterval(() => {
-    if (authWindow && authWindow.closed) {
-      clearInterval(loginCheckInterval);
-      loginCheckInterval = null;
-      checkAutoLogin();
-      return;
-    }
-    
-    // JSONP polling to avoid CORS blocking during check
-    const oldPollScript = document.getElementById('gas-jsonp-poll');
-    if (oldPollScript) oldPollScript.remove();
-    
-    window.handlePollResponse = (data) => {
-      if (data && data.status !== "unauthenticated") {
-        if (authWindow) authWindow.close();
-        clearInterval(loginCheckInterval);
-        loginCheckInterval = null;
-        checkAutoLogin();
-      }
-    };
-    
-    const script = document.createElement('script');
-    script.id = 'gas-jsonp-poll';
-    script.src = `${gasUrl}?action=login_check&callback=handlePollResponse&t=${Date.now()}`;
-    script.onerror = () => {
-      // Ignore errors before auth is granted
-    };
-    document.body.appendChild(script);
-  }, 2000);
 }
 
 async function saveUserScore() {
@@ -814,6 +807,26 @@ async function saveToGas(user) {
   return await res.json();
 }
 
+async function testGasConnection() {
+  if (!gasUrl) {
+    isGasActive = false;
+    updateConnectionBadges();
+    return;
+  }
+  try {
+    const res = await fetchWithTimeout(`${gasUrl}?action=get_stats`, { timeout: 3000 });
+    if (res.ok) {
+      isGasActive = true;
+    } else {
+      isGasActive = false;
+    }
+  } catch (e) {
+    console.warn("GAS connection test failed:", e);
+    isGasActive = false;
+  }
+  updateConnectionBadges();
+}
+
 // --- STATE MANAGEMENT ---
 function updateState(newState) {
   currentGameState = newState;
@@ -823,7 +836,8 @@ function updateState(newState) {
     lobbyWaiting.style.display = 'none';
   } else {
     if (lobbyLoading) lobbyLoading.style.display = 'none';
-    if (lobbyAuthRequired) lobbyAuthRequired.style.display = 'none';
+    if (lobbyEmailEntry) lobbyEmailEntry.style.display = 'none';
+    if (lobbyCodeEntry) lobbyCodeEntry.style.display = 'none';
     if (lobbyRegistrationPanel) lobbyRegistrationPanel.style.display = 'none';
     
     if (newState.status === "LOBBY") {
@@ -868,10 +882,24 @@ function renderDashboard(user) {
   document.getElementById('dash-completed').innerText = `${completedCount} / 6 件`;
 }
 
-// Handle Google Authentication triggering via popup
-btnGoogleLogin.addEventListener('click', () => {
-  startGoogleLoginFlow();
-});
+// Handle OTP buttons
+if (btnSendOtp) {
+  btnSendOtp.addEventListener('click', () => {
+    sendOtp();
+  });
+}
+
+if (btnVerifyOtp) {
+  btnVerifyOtp.addEventListener('click', () => {
+    verifyOtp();
+  });
+}
+
+if (btnBackToEmail) {
+  btnBackToEmail.addEventListener('click', () => {
+    showLobbySubPanel('email');
+  });
+}
 
 // Handle Name Registration
 if (btnRegisterName) {
