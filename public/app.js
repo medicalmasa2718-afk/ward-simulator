@@ -515,7 +515,7 @@ async function init() {
     checkAutoLogin(true); // silent = true
   } else {
     // If no gas URL, show unauthenticated/local mode
-    showLobbySubPanel('auth');
+    showLobbySubPanel('email');
   }
 }
 
