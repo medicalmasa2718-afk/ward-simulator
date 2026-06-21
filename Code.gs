@@ -177,14 +177,49 @@ function doGet(e) {
       var activeEmail = Session.getActiveUser().getEmail();
       var htmlContent = "";
       if (activeEmail) {
+        var email = activeEmail.toLowerCase().trim();
+        var ss = SpreadsheetApp.getActiveSpreadsheet();
+        var sheet = ss.getSheetByName("Users") || ss.getActiveSheet();
+        
+        var userRecord = { email: email, name: "匿名医師", high_score: 0, completed_cases: [], last_played: "", status: "not_found" };
+        
+        if (sheet.getLastRow() > 1) {
+          var data = sheet.getDataRange().getValues();
+          var found = false;
+          for (var i = 1; i < data.length; i++) {
+            if (data[i][0] && data[i][0].toString().toLowerCase() === email) {
+              var uName = (data[i][1] || "").toString().trim();
+              userRecord = {
+                email: data[i][0],
+                name: uName || "匿名医師",
+                high_score: parseInt(data[i][2]) || 0,
+                completed_cases: data[i][3] ? data[i][3].toString().split(",") : [],
+                last_played: data[i][4] ? data[i][4].toString() : "",
+                status: (!uName || uName === "匿名医師") ? "not_registered" : "success"
+              };
+              found = true;
+              break;
+            }
+          }
+          if (!found) {
+            userRecord.status = "not_found";
+          }
+        }
+        
         htmlContent = "<html><head><meta charset='UTF-8'><title>認証成功</title></head>" +
                       "<body style='font-family: sans-serif; text-align: center; padding-top: 100px; background: #0f172a; color: #fff;'>" +
                       "<div style='background: rgba(255,255,255,0.05); display: inline-block; padding: 40px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1);'>" +
                       "<h2 style='color: #22c55e; margin-bottom: 10px;'>✓ 認証成功</h2>" +
-                      "<p style='font-size: 1.1rem; margin-bottom: 20px;'>Google アカウント (" + activeEmail + ") の連携に成功しました。</p>" +
+                      "<p style='font-size: 1.1rem; margin-bottom: 20px;'>Google アカウント (" + email + ") の連携に成功しました。</p>" +
                       "<p style='color: #94a3b8; font-size: 0.9rem;'>このウィンドウは自動的に閉じます。ゲーム画面に戻ってください。</p>" +
                       "</div>" +
-                      "<script>setTimeout(function(){ window.close(); }, 2500);</script>" +
+                      "<script>" +
+                      "  var dataToSend = " + JSON.stringify(userRecord) + ";" +
+                      "  if (window.opener) {" +
+                      "    window.opener.postMessage({ type: 'AUTH_SUCCESS', data: dataToSend }, '*');" +
+                      "  }" +
+                      "  setTimeout(function(){ window.close(); }, 2000);" +
+                      "</script>" +
                       "</body></html>";
       } else {
         htmlContent = "<html><head><meta charset='UTF-8'><title>認証エラー</title></head>" +

@@ -537,6 +537,44 @@ function recordStats(caseId, tried, correct) {
   }).catch(e => console.error(e));
 }
 
+window.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'AUTH_SUCCESS') {
+    const userData = event.data.data;
+    handleAuthSuccess(userData);
+  }
+});
+
+function handleAuthSuccess(data) {
+  isGasActive = true;
+  updateConnectionBadges();
+  
+  const user = {
+    email: data.email,
+    name: data.name || "匿名医師",
+    high_score: parseInt(data.high_score) || 0,
+    completed_cases: Array.isArray(data.completed_cases) 
+      ? data.completed_cases 
+      : (data.completed_cases ? data.completed_cases.split(",") : []),
+    last_played: data.last_played || ""
+  };
+  
+  currentUserData = user;
+  
+  if (loginCheckInterval) {
+    clearInterval(loginCheckInterval);
+    loginCheckInterval = null;
+  }
+  
+  if (data.status === "not_registered" || data.status === "not_found" || user.name === "匿名医師") {
+    showLobbySubPanel('register');
+  } else {
+    hasJoined = true;
+    updateConnectionBadges();
+    showLobbySubPanel('waiting');
+    renderDashboard(user);
+  }
+}
+
 // --- DATABASE SYNC LOGICS (GAS & LocalStorage) ---
 let loginCheckInterval = null;
 
