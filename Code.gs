@@ -151,6 +151,7 @@ function doPost(e) {
 function doGet(e) {
   try {
     var action = e.parameter.action;
+    var callback = e.parameter.callback; // JSONP用のコールバックパラメータ
     
     if (action === "get_stats") {
       var ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -168,7 +169,12 @@ function doGet(e) {
           }
         }
       }
-      return ContentService.createTextOutput(JSON.stringify(stats))
+      var jsonString = JSON.stringify(stats);
+      if (callback) {
+        return ContentService.createTextOutput(callback + "(" + jsonString + ")")
+          .setMimeType(ContentService.MimeType.JAVASCRIPT);
+      }
+      return ContentService.createTextOutput(jsonString)
         .setMimeType(ContentService.MimeType.JSON);
     }
     
@@ -236,7 +242,12 @@ function doGet(e) {
     // ログイン情報の自動確認 (action === "login_check" またはデフォルト)
     var activeEmail = Session.getActiveUser().getEmail();
     if (!activeEmail) {
-      return ContentService.createTextOutput(JSON.stringify({status: "unauthenticated"}))
+      var unauthObj = {status: "unauthenticated"};
+      if (callback) {
+        return ContentService.createTextOutput(callback + "(" + JSON.stringify(unauthObj) + ")")
+          .setMimeType(ContentService.MimeType.JAVASCRIPT);
+      }
+      return ContentService.createTextOutput(JSON.stringify(unauthObj))
         .setMimeType(ContentService.MimeType.JSON);
     }
     
@@ -271,11 +282,22 @@ function doGet(e) {
       userRecord.status = "not_found";
     }
     
-    return ContentService.createTextOutput(JSON.stringify(userRecord))
+    var jsonString = JSON.stringify(userRecord);
+    if (callback) {
+      return ContentService.createTextOutput(callback + "(" + jsonString + ")")
+        .setMimeType(ContentService.MimeType.JAVASCRIPT);
+    }
+    return ContentService.createTextOutput(jsonString)
       .setMimeType(ContentService.MimeType.JSON);
       
   } catch (err) {
-    return ContentService.createTextOutput(JSON.stringify({status: "error", message: err.toString()}))
+    var errObj = {status: "error", message: err.toString()};
+    var callback = e.parameter.callback;
+    if (callback) {
+      return ContentService.createTextOutput(callback + "(" + JSON.stringify(errObj) + ")")
+        .setMimeType(ContentService.MimeType.JAVASCRIPT);
+    }
+    return ContentService.createTextOutput(JSON.stringify(errObj))
       .setMimeType(ContentService.MimeType.JSON);
   }
 }

@@ -586,10 +586,20 @@ async function checkAutoLogin(silent = false) {
   
   if (!silent) showLobbySubPanel('loading');
 
-  try {
-    const checkUrl = `${gasUrl}?action=login_check&t=${Date.now()}`;
-    const res = await fetchWithTimeout(checkUrl, { mode: 'cors' });
-    const data = await res.json();
+  const oldScript = document.getElementById('gas-jsonp-script');
+  if (oldScript) oldScript.remove();
+
+  let timeoutId = null;
+  if (!silent) {
+    timeoutId = setTimeout(() => {
+      console.warn("JSONP login check timed out.");
+      showLobbySubPanel('auth');
+      updateConnectionBadges();
+    }, 10000);
+  }
+
+  window.handleJsonpResponse = (data) => {
+    if (timeoutId) clearTimeout(timeoutId);
     
     if (data && data.status === "unauthenticated") {
       isGasActive = true;
@@ -626,12 +636,20 @@ async function checkAutoLogin(silent = false) {
       isGasActive = false;
       showLobbySubPanel('auth');
     }
-  } catch (err) {
-    console.warn("Auto login check failed:", err);
+    updateConnectionBadges();
+  };
+
+  const script = document.createElement('script');
+  script.id = 'gas-jsonp-script';
+  script.src = `${gasUrl}?action=login_check&callback=handleJsonpResponse&t=${Date.now()}`;
+  script.onerror = () => {
+    if (timeoutId) clearTimeout(timeoutId);
+    console.warn("JSONP script load error - likely unauthenticated.");
     isGasActive = false;
     showLobbySubPanel('auth');
-  }
-  updateConnectionBadges();
+    updateConnectionBadges();
+  };
+  document.body.appendChild(script);
 }
 
 async function registerUserName() {
