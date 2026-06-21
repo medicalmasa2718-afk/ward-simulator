@@ -47,8 +47,22 @@
         連携状態: <span id="settings-connection-status" class="status-badge local">⚪ ローカル保存モード</span>
       </div>
       
+      <!-- Admin Biometric Authentication Section -->
+      <div id="admin-auth-section" class="admin-auth-section" style="margin-top: 1.5rem; border-top: 1px solid var(--border-light); padding-top: 1.5rem;">
+        <h4 style="font-size: 0.85rem; color: var(--warning); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem;">管理者ロック制御</h4>
+        <div id="admin-auth-status" class="admin-auth-status locked" style="font-size: 0.8rem; margin-bottom: 0.75rem; color: var(--text-muted);">
+          ステータス: <span id="admin-status-badge" class="badge-locked" style="color: #ef4444; font-weight: 700;">🔒 LOCKED</span>
+        </div>
+        <p id="admin-auth-desc" style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.75rem; line-height: 1.4;">
+          管理者専用デバッグツールにアクセスするには、登録されたデバイスの生体認証（Touch ID等）が必要です。
+        </p>
+        <button id="btn-admin-register-bio" class="btn btn-primary btn-block" style="display: none; font-size: 0.8rem; margin-bottom: 0.5rem;">🔑 生体認証デバイスを新規登録</button>
+        <button id="btn-admin-unlock-bio" class="btn btn-success btn-block" style="display: none; font-size: 0.8rem; margin-bottom: 0.5rem; background: var(--warning); color: #000; font-weight: 700;">🔓 生体認証でロック解除</button>
+        <button id="btn-admin-lock-bio" class="btn btn-block" style="display: none; font-size: 0.8rem; margin-bottom: 0.5rem; background: #374151; color: #fff;">🔒 管理者ログアウト (再ロック)</button>
+      </div>
+
       <!-- Admin Panel Section -->
-      <div class="admin-panel-section" style="margin-top: 1.5rem; border-top: 1px solid var(--border-light); padding-top: 1.5rem;">
+      <div id="admin-panel-section" class="admin-panel-section" style="margin-top: 1.5rem; border-top: 1px solid var(--border-light); padding-top: 1.5rem; display: none;">
         <h4 style="font-size: 0.85rem; color: var(--warning); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.75rem;">管理者専用デバッグツール</h4>
         
         <div class="form-group" style="margin-bottom: 0.75rem;">

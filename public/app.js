@@ -442,6 +442,16 @@ const btnAdminSpawn = document.getElementById('btn-admin-spawn');
 const btnAdminHeal = document.getElementById('btn-admin-heal');
 const btnAdminTime = document.getElementById('btn-admin-time');
 const adminInvincibleToggle = document.getElementById('admin-invincible-toggle');
+const adminPanelSection = document.getElementById('admin-panel-section');
+
+// Admin Biometric Lock Elements
+const btnAdminRegisterBio = document.getElementById('btn-admin-register-bio');
+const btnAdminUnlockBio = document.getElementById('btn-admin-unlock-bio');
+const btnAdminLockBio = document.getElementById('btn-admin-lock-bio');
+const adminStatusBadge = document.getElementById('admin-status-badge');
+const adminAuthDesc = document.getElementById('admin-auth-desc');
+
+let isAdminAuthenticated = false; // Session authentication flag
 
 // Result Screen
 const resultTitle = document.getElementById('result-title');
@@ -473,6 +483,7 @@ async function fetchWithTimeout(resource, options = {}) {
 // --- INITIALIZE PAGE ---
 async function init() {
   updateConnectionBadges();
+  updateAdminAuthUI();
   
   try {
     const res = await fetch('data/cases.json');
@@ -2027,12 +2038,16 @@ if (gasUrlInput) {
 if (btnSettingsToggle) {
   btnSettingsToggle.addEventListener('click', () => {
     settingsDrawer.classList.add('open');
+    updateAdminAuthUI();
   });
 }
 
 if (btnSettingsClose) {
   btnSettingsClose.addEventListener('click', () => {
     settingsDrawer.classList.remove('open');
+    // Lock the admin panel again when drawer closes for security
+    isAdminAuthenticated = false;
+    updateAdminAuthUI();
   });
 }
 
@@ -2042,6 +2057,9 @@ if (btnSettingsSave) {
     localStorage.setItem('gas_url', gasUrl);
     isGasActive = false;
     updateConnectionBadges();
+    // Lock the admin panel again on save
+    isAdminAuthenticated = false;
+    updateAdminAuthUI();
     settingsDrawer.classList.remove('open');
     console.log("Saved GAS URL:", gasUrl);
     
@@ -2071,6 +2089,10 @@ if (btnSettingsSave) {
 // --- ADMIN PANEL EVENT BINDINGS ---
 if (btnAdminSpawn) {
   btnAdminSpawn.addEventListener('click', () => {
+    if (!isAdminAuthenticated) {
+      addLog("⚠️ 管理者認証が完了していません。");
+      return;
+    }
     const bedId = adminSelectBed.value;
     const caseId = adminSelectCase.value;
     if (bedId && caseId) {
@@ -2081,6 +2103,10 @@ if (btnAdminSpawn) {
 
 if (btnAdminHeal) {
   btnAdminHeal.addEventListener('click', () => {
+    if (!isAdminAuthenticated) {
+      addLog("⚠️ 管理者認証が完了していません。");
+      return;
+    }
     if (currentGameState.status === "PLAYING") {
       currentGameState.safety = 100;
       addLog("💚 管理者権限: 患者安全度を100%に全回復しました。");
@@ -2093,6 +2119,10 @@ if (btnAdminHeal) {
 
 if (btnAdminTime) {
   btnAdminTime.addEventListener('click', () => {
+    if (!isAdminAuthenticated) {
+      addLog("⚠️ 管理者認証が完了していません。");
+      return;
+    }
     if (currentGameState.status === "PLAYING") {
       currentGameState.time_left = Math.min(currentGameState.time_left, 10);
       addLog("⏱️ 管理者権限: 残り時間を10秒に短縮しました。");
@@ -2100,6 +2130,190 @@ if (btnAdminTime) {
     } else {
       addLog("⚠️ 当直シフトが開始されていません。");
     }
+  });
+}
+
+// --- WEBBIOMETRIC AUTHENTICATION LOCK LOGIC ---
+function updateAdminAuthUI() {
+  const credId = localStorage.getItem('admin_cred_id');
+  
+  if (!btnAdminRegisterBio || !btnAdminUnlockBio || !btnAdminLockBio || !adminStatusBadge || !adminPanelSection || !adminAuthDesc) return;
+  
+  if (!credId) {
+    // Unregistered state
+    btnAdminRegisterBio.style.display = 'block';
+    btnAdminUnlockBio.style.display = 'none';
+    btnAdminLockBio.style.display = 'none';
+    adminStatusBadge.innerText = '🔒 未登録 (UNREGISTERED)';
+    adminStatusBadge.style.color = '#fbbf24'; // Warning yellow
+    adminAuthDesc.innerText = '管理者専用デバッグツールを使用するには、まずこのデバイスの生体認証（Touch ID/Face ID等）を登録してください。';
+    adminPanelSection.style.display = 'none';
+  } else if (isAdminAuthenticated) {
+    // Authenticated state
+    btnAdminRegisterBio.style.display = 'none';
+    btnAdminUnlockBio.style.display = 'none';
+    btnAdminLockBio.style.display = 'block';
+    adminStatusBadge.innerText = '🔓 認証完了 (UNLOCKED)';
+    adminStatusBadge.style.color = '#10b981'; // Connected green
+    adminAuthDesc.innerText = '管理者ロックは解除されています。デバッグツールが有効です。';
+    
+    // Display panel
+    adminPanelSection.style.display = 'block';
+  } else {
+    // Locked state
+    btnAdminRegisterBio.style.display = 'none';
+    btnAdminUnlockBio.style.display = 'block';
+    btnAdminLockBio.style.display = 'none';
+    adminStatusBadge.innerText = '🔒 ロック中 (LOCKED)';
+    adminStatusBadge.style.color = '#ef4444'; // Danger red
+    adminAuthDesc.innerText = 'デバッグツールにアクセスするには、「生体認証でロック解除」をクリックして指紋・顔認証を行ってください。';
+    adminPanelSection.style.display = 'none';
+  }
+}
+
+// Convert buffer to Base64URL
+function bufferToBase64URL(buffer) {
+  const bytes = new Uint8Array(buffer);
+  let binary = '';
+  for (let i = 0; i < bytes.byteLength; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary)
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=/g, '');
+}
+
+// Convert Base64URL to buffer
+function base64URLToBuffer(base64url) {
+  let base64 = base64url
+    .replace(/-/g, '+')
+    .replace(/_/g, '/');
+  while (base64.length % 4) {
+    base64 += '=';
+  }
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return bytes.buffer;
+}
+
+// WebAuthn Registration (Credentials Creation)
+async function registerAdminBiometrics() {
+  try {
+    const challenge = new Uint8Array(32);
+    window.crypto.getRandomValues(challenge);
+    
+    const userID = new Uint8Array(16);
+    window.crypto.getRandomValues(userID);
+
+    const rpId = window.location.hostname || "localhost";
+
+    const publicKeyCredentialCreationOptions = {
+      challenge: challenge,
+      rp: {
+        name: "Ward Simulator",
+        id: rpId
+      },
+      user: {
+        id: userID,
+        name: "admin@ward-simulator",
+        displayName: "Ward Simulator Administrator"
+      },
+      pubKeyCredParams: [
+        { type: "public-key", alg: -7 }, // ES256
+        { type: "public-key", alg: -257 } // RS256
+      ],
+      authenticatorSelection: {
+        authenticatorAttachment: "platform", // Platform-integrated (Touch ID / Face ID)
+        userVerification: "required"
+      },
+      timeout: 60000
+    };
+
+    const credential = await navigator.credentials.create({
+      publicKey: publicKeyCredentialCreationOptions
+    });
+
+    if (credential) {
+      const credId = bufferToBase64URL(credential.rawId);
+      localStorage.setItem('admin_cred_id', credId);
+      addLog("🔒 管理者デバイスの生体認証（Touch ID等）を正常に登録しました。");
+      return true;
+    }
+  } catch (err) {
+    console.error("Biometric registration error:", err);
+    alert("登録に失敗しました（WebAuthnをサポートするブラウザとデバイスが必要です）: " + err.message);
+  }
+  return false;
+}
+
+// WebAuthn Authentication (Credentials Assertion)
+async function authenticateAdminBiometrics() {
+  try {
+    const credIdStr = localStorage.getItem('admin_cred_id');
+    if (!credIdStr) {
+      alert("生体認証が登録されていません。");
+      return false;
+    }
+
+    const challenge = new Uint8Array(32);
+    window.crypto.getRandomValues(challenge);
+
+    const rawId = base64URLToBuffer(credIdStr);
+
+    const publicKeyCredentialRequestOptions = {
+      challenge: challenge,
+      allowCredentials: [{
+        id: rawId,
+        type: "public-key"
+      }],
+      userVerification: "required",
+      timeout: 60000
+    };
+
+    const assertion = await navigator.credentials.get({
+      publicKey: publicKeyCredentialRequestOptions
+    });
+
+    if (assertion) {
+      addLog("🔓 生体認証によるロック解除に成功しました。管理者用ツールが有効です。");
+      return true;
+    }
+  } catch (err) {
+    console.error("Biometric authentication error:", err);
+    alert("認証に失敗しました: " + err.message);
+  }
+  return false;
+}
+
+// Biometric control event bindings
+if (btnAdminRegisterBio) {
+  btnAdminRegisterBio.addEventListener('click', async () => {
+    const success = await registerAdminBiometrics();
+    if (success) {
+      updateAdminAuthUI();
+    }
+  });
+}
+
+if (btnAdminUnlockBio) {
+  btnAdminUnlockBio.addEventListener('click', async () => {
+    const success = await authenticateAdminBiometrics();
+    if (success) {
+      isAdminAuthenticated = true;
+      updateAdminAuthUI();
+    }
+  });
+}
+
+if (btnAdminLockBio) {
+  btnAdminLockBio.addEventListener('click', () => {
+    isAdminAuthenticated = false;
+    updateAdminAuthUI();
+    addLog("🔒 管理者ロックを再有効化し、デバッグツールをロックしました。");
   });
 }
 
