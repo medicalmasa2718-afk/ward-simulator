@@ -150,7 +150,11 @@
           }
         ]
       }
-    ]
+    ],
+    "source": {
+      "title": "急性大動脈解離Stanford Aで脳梗塞を合併し，保存的加療となったが，その後血栓開存となった症例に対する理学療法",
+      "url": "https://www.jstage.jst.go.jp/article/cjpt/2014/0/2014_0886/_article/-char/ja/"
+    }
   },
   {
     "id": "sepsis",
@@ -219,7 +223,11 @@
           }
         ]
       }
-    ]
+    ],
+    "source": {
+      "title": "ガス産生菌を伴う重症急性胆管炎に起因した胆道気腫症の1例",
+      "url": "https://www.jstage.jst.go.jp/article/pde/88/1/88_172/_article/-char/ja/"
+    }
   },
   {
     "id": "varices",
@@ -284,7 +292,11 @@
           }
         ]
       }
-    ]
+    ],
+    "source": {
+      "title": "食道静脈瘤破裂の内視鏡止血困難例に対し傍臍静脈からのPTO（percutaneous transhepatic obliteration）にて治療しえた1例",
+      "url": "https://www.jstage.jst.go.jp/article/nisshoshi/120/2/120_183/_article/-char/ja/"
+    }
   },
   {
     "id": "hyperkalemia",
@@ -371,7 +383,11 @@
           }
         ]
       }
-    ]
+    ],
+    "source": {
+      "title": "重篤な高カリウム血症に関するJ-STAGE学術論文検索",
+      "url": "https://www.jstage.jst.go.jp/result/-char/ja?globalSearchKey=%E9%87%8D%E7%AF%A4%E3%81%AA%E9%AB%98%E3%82%AB%E3%83%AA%E3%82%A6%E3%83%A0%E8%A1%80%E7%97%87"
+    }
   },
   {
     "id": "copd",
@@ -460,7 +476,11 @@
           }
         ]
       }
-    ]
+    ],
+    "source": {
+      "title": "COPD急性増悪・CO2ナルコーシスに関するJ-STAGE学術論文検索",
+      "url": "https://www.jstage.jst.go.jp/result/-char/ja?globalSearchKey=COPD%E6%80%A5%E6%80%A7%E5%A2%97%E6%82%AA%E3%83%BBCO2%E3%83%8A%E3%83%AB%E3%82%B3%E3%83%BC%E3%82%B7%E3%82%B9"
+    }
   },
   {
     "id": "leak",
@@ -501,7 +521,11 @@
           }
         ]
       }
-    ]
+    ],
+    "source": {
+      "title": "日常指示：点滴漏れに関するJ-STAGE学術論文検索",
+      "url": "https://www.jstage.jst.go.jp/result/-char/ja?globalSearchKey=%E6%97%A5%E5%B8%B8%E6%8C%87%E7%A4%BA%EF%BC%9A%E7%82%B9%E6%BB%B4%E6%BC%8F%E3%82%8C"
+    }
   },
   {
     "id": "insomnia",
@@ -542,7 +566,11 @@
           }
         ]
       }
-    ]
+    ],
+    "source": {
+      "title": "日常指示：不眠の訴えに関するJ-STAGE学術論文検索",
+      "url": "https://www.jstage.jst.go.jp/result/-char/ja?globalSearchKey=%E6%97%A5%E5%B8%B8%E6%8C%87%E7%A4%BA%EF%BC%9A%E4%B8%8D%E7%9C%A0%E3%81%AE%E8%A8%B4%E3%81%88"
+    }
   },
   {
     "id": "delirium",
@@ -583,7 +611,11 @@
           }
         ]
       }
-    ]
+    ],
+    "source": {
+      "title": "日常指示：夜間不穏・せん妄に関するJ-STAGE学術論文検索",
+      "url": "https://www.jstage.jst.go.jp/result/-char/ja?globalSearchKey=%E6%97%A5%E5%B8%B8%E6%8C%87%E7%A4%BA%EF%BC%9A%E5%A4%9C%E9%96%93%E4%B8%8D%E7%A9%8F%E3%83%BB%E3%81%9B%E3%82%93%E5%A6%84"
+    }
   },
   {
     "id": "adrenal",
@@ -624,7 +656,11 @@
           }
         ]
       }
-    ]
+    ],
+    "source": {
+      "title": "I．急性副腎不全（副腎クリーゼ）",
+      "url": "https://www.jstage.jst.go.jp/article/naika/105/4/105_640/_article/-char/ja/"
+    }
   },
   {
     "id": "obstructive_sepsis",
@@ -665,7 +701,11 @@
           }
         ]
       }
-    ]
+    ],
+    "source": {
+      "title": "閉塞性尿路感染症による敗血症に関するJ-STAGE学術論文検索",
+      "url": "https://www.jstage.jst.go.jp/result/-char/ja?globalSearchKey=%E9%96%89%E5%A1%9E%E6%80%A7%E5%B0%BF%E8%B7%AF%E6%84%9F%E6%9F%93%E7%97%87%E3%81%AB%E3%82%88%E3%82%8B%E6%95%97%E8%A1%80%E7%97%87"
+    }
   },
   {
     "id": "pancreatitis",
@@ -705,7 +745,11 @@
           }
         ]
       }
-    ]
+    ],
+    "source": {
+      "title": "Walled-off Necrosisに対するステップアップ・アプローチの成績と内視鏡治療不成功の要因解析",
+      "url": "https://www.jstage.jst.go.jp/article/jaem/44/5/44_695/_article/-char/ja/"
+    }
   },
   {
     "id": "anaphylaxis",
@@ -752,7 +796,11 @@
           }
         ]
       }
-    ]
+    ],
+    "source": {
+      "title": "VII．エマージェンシーとしてのアレルギー疾患",
+      "url": "https://www.jstage.jst.go.jp/article/naika/105/10/105_1975/_article/-char/ja/"
+    }
   },
   {
     "id": "pneumothorax",
@@ -810,7 +858,11 @@
           }
         ]
       }
-    ]
+    ],
+    "source": {
+      "title": "ヒト用アンブ蘇生バッグでの用手的換気が原因で緊張性気胸を発症したマイクロミニピッグの1例",
+      "url": "https://www.jstage.jst.go.jp/article/jsvc/48/1/48_15/_article/-char/ja/"
+    }
   },
   {
     "id": "stemi",
@@ -851,7 +903,11 @@
           }
         ]
       }
-    ]
+    ],
+    "source": {
+      "title": "長期経過観察をし得た心筋梗塞の猫の1例",
+      "url": "https://www.jstage.jst.go.jp/article/jsvc/56/1/56_9/_article/-char/ja/"
+    }
   },
   {
     "id": "hypoglycemia",
@@ -927,7 +983,11 @@
           }
         ]
       }
-    ]
+    ],
+    "source": {
+      "title": "SU薬による低血糖昏睡に関するJ-STAGE学術論文検索",
+      "url": "https://www.jstage.jst.go.jp/result/-char/ja?globalSearchKey=SU%E8%96%AC%E3%81%AB%E3%82%88%E3%82%8B%E4%BD%8E%E8%A1%80%E7%B3%96%E6%98%8F%E7%9D%A1"
+    }
   },
   {
     "id": "sah",
@@ -986,7 +1046,11 @@
           }
         ]
       }
-    ]
+    ],
+    "source": {
+      "title": "非外傷性脳動脈瘤破裂によるくも膜下出血の発症から一ヶ月経過時点の歩行自立可否の予測",
+      "url": "https://www.jstage.jst.go.jp/article/cjpt/2015/0/2015_1012/_article/-char/ja/"
+    }
   },
   {
     "id": "pulmonary_embolism",
@@ -1043,7 +1107,11 @@
           }
         ]
       }
-    ]
+    ],
+    "source": {
+      "title": "心電図所見が診断に有用であった急性肺血栓塞栓症の 1 例",
+      "url": "https://www.jstage.jst.go.jp/article/jhgmwabun/17/5/17_570/_article/-char/ja/"
+    }
   },
   {
     "id": "heatstroke",
@@ -1084,7 +1152,11 @@
           }
         ]
       }
-    ]
+    ],
+    "source": {
+      "title": "現場において重症熱中症との判断が困難であった大学アメリカンフットボール選手の1例",
+      "url": "https://www.jstage.jst.go.jp/article/jsatj/3/1/3_67/_article/-char/ja/"
+    }
   },
   {
     "id": "APP001",
@@ -1193,7 +1265,11 @@
           }
         ]
       }
-    ]
+    ],
+    "source": {
+      "title": "小児急性虫垂炎における画像診断モダリティの選択：ガイドライン策定前後での比較",
+      "url": "https://www.jstage.jst.go.jp/article/jspr/39/1/39_35/_article/-char/ja/"
+    }
   },
   {
     "id": "PNEU002",
@@ -1302,7 +1378,11 @@
           }
         ]
       }
-    ]
+    ],
+    "source": {
+      "title": "抗菌薬アレルギーにより治療が困難であった胸痛を伴う細菌性肺炎に柴陥湯が奏効した1例",
+      "url": "https://www.jstage.jst.go.jp/article/kampomed/74/1/74_25/_article/-char/ja/"
+    }
   },
   {
     "id": "MENI003",
@@ -1411,7 +1491,11 @@
           }
         ]
       }
-    ]
+    ],
+    "source": {
+      "title": "高齢発症細菌性髄膜炎の特徴",
+      "url": "https://www.jstage.jst.go.jp/article/geriatrics/60/1/60_60.79/_article/-char/ja/"
+    }
   },
   {
     "id": "DKA004",
@@ -1520,7 +1604,11 @@
           }
         ]
       }
-    ]
+    ],
+    "source": {
+      "title": "虚血性小腸炎による回腸穿孔を併発した糖尿病性ケトアシドーシスの1例",
+      "url": "https://www.jstage.jst.go.jp/article/jsem/20/4/20_616/_article/-char/ja/"
+    }
   },
   {
     "id": "AFIB005",
@@ -1629,7 +1717,11 @@
           }
         ]
       }
-    ]
+    ],
+    "source": {
+      "title": "非弁膜症性心房細動では赤血球の変形能が低下する",
+      "url": "https://www.jstage.jst.go.jp/article/jocp/49/2/49_65/_article/-char/ja/"
+    }
   },
   {
     "id": "CASE001",
@@ -1745,7 +1837,11 @@
           }
         ]
       }
-    ]
+    ],
+    "source": {
+      "title": "義歯の咽頭での停留により遷延した誤嚥性肺炎の1例",
+      "url": "https://www.jstage.jst.go.jp/article/pde/87/1/87_84/_article/-char/ja/"
+    }
   },
   {
     "id": "CASE002",
@@ -1861,7 +1957,11 @@
           }
         ]
       }
-    ]
+    ],
+    "source": {
+      "title": "CQ8 小児気管支喘息患者の急性増悪 (発作) 時の全身性ステロイド薬の投与は増悪後の症状再燃予防に有用か？",
+      "url": "https://www.jstage.jst.go.jp/article/jspaci/31/3/31_343/_article/-char/ja/"
+    }
   },
   {
     "id": "CASE003",
@@ -1977,7 +2077,11 @@
           }
         ]
       }
-    ]
+    ],
+    "source": {
+      "title": "急性期に無症候性心筋梗塞を合併した川崎病冠動脈瘤の1例",
+      "url": "https://www.jstage.jst.go.jp/article/shinzo/51/3/51_367/_article/-char/ja/"
+    }
   },
   {
     "id": "CASE004",
@@ -2093,7 +2197,11 @@
           }
         ]
       }
-    ]
+    ],
+    "source": {
+      "title": "長期経過観察をし得た心筋梗塞の猫の1例",
+      "url": "https://www.jstage.jst.go.jp/article/jsvc/56/1/56_9/_article/-char/ja/"
+    }
   },
   {
     "id": "CASE005",
@@ -2209,7 +2317,11 @@
           }
         ]
       }
-    ]
+    ],
+    "source": {
+      "title": "小児急性虫垂炎における画像診断モダリティの選択：ガイドライン策定前後での比較",
+      "url": "https://www.jstage.jst.go.jp/article/jspr/39/1/39_35/_article/-char/ja/"
+    }
   },
   {
     "id": "C001",
@@ -2292,7 +2404,11 @@
           }
         ]
       }
-    ]
+    ],
+    "source": {
+      "title": "突然のだるさと黄疸に関するJ-STAGE学術論文検索",
+      "url": "https://www.jstage.jst.go.jp/result/-char/ja?globalSearchKey=%E7%AA%81%E7%84%B6%E3%81%AE%E3%81%A0%E3%82%8B%E3%81%95%E3%81%A8%E9%BB%84%E7%96%B8"
+    }
   },
   {
     "id": "C002",
@@ -2375,7 +2491,11 @@
           }
         ]
       }
-    ]
+    ],
+    "source": {
+      "title": "長期経過観察をし得た心筋梗塞の猫の1例",
+      "url": "https://www.jstage.jst.go.jp/article/jsvc/56/1/56_9/_article/-char/ja/"
+    }
   },
   {
     "id": "C003",
@@ -2459,7 +2579,11 @@
           }
         ]
       }
-    ]
+    ],
+    "source": {
+      "title": "透析患者の呼吸困難と全身倦怠感に関するJ-STAGE学術論文検索",
+      "url": "https://www.jstage.jst.go.jp/result/-char/ja?globalSearchKey=%E9%80%8F%E6%9E%90%E6%82%A3%E8%80%85%E3%81%AE%E5%91%BC%E5%90%B8%E5%9B%B0%E9%9B%A3%E3%81%A8%E5%85%A8%E8%BA%AB%E5%80%A6%E6%80%A0%E6%84%9F"
+    }
   },
   {
     "id": "C004",
@@ -2543,7 +2667,11 @@
           }
         ]
       }
-    ]
+    ],
+    "source": {
+      "title": "小児急性虫垂炎における画像診断モダリティの選択：ガイドライン策定前後での比較",
+      "url": "https://www.jstage.jst.go.jp/article/jspr/39/1/39_35/_article/-char/ja/"
+    }
   },
   {
     "id": "C005",
@@ -2628,7 +2756,11 @@
           }
         ]
       }
-    ]
+    ],
+    "source": {
+      "title": "Respiratory syncytial ウイルス細気管支炎に合併した乳び胸の一例",
+      "url": "https://www.jstage.jst.go.jp/article/joma/132/2/132_83/_article/-char/ja/"
+    }
   },
   {
     "id": "PED001",
@@ -2751,7 +2883,11 @@
           }
         ]
       }
-    ]
+    ],
+    "source": {
+      "title": "幼児におけるマイコプラズマ先行感染による急性小脳失調症例",
+      "url": "https://www.jstage.jst.go.jp/article/shonijibi/39/1/39_44/_article/-char/ja/"
+    }
   },
   {
     "id": "IM001",
@@ -2881,7 +3017,11 @@
           }
         ]
       }
-    ]
+    ],
+    "source": {
+      "title": "ロケルマ<sup>&reg;</sup>懸濁用散分包5g，10g",
+      "url": "https://www.jstage.jst.go.jp/article/faruawpsj/56/9/56_858/_article/-char/ja/"
+    }
   },
   {
     "id": "IM002",
@@ -3025,7 +3165,11 @@
           }
         ]
       }
-    ]
+    ],
+    "source": {
+      "title": "難治性浮腫を契機に肺血栓塞栓症の診断に至った重症心身障害者例",
+      "url": "https://www.jstage.jst.go.jp/article/jsmid/46/1/46_111/_article/-char/ja/"
+    }
   },
   {
     "id": "IM003",
@@ -3155,7 +3299,11 @@
           }
         ]
       }
-    ]
+    ],
+    "source": {
+      "title": "ポリグリコール酸シートを用いた 若年者自然気胸の胸腔鏡下手術後再発の検討",
+      "url": "https://www.jstage.jst.go.jp/article/numa/78/6/78_347/_article/-char/ja/"
+    }
   },
   {
     "id": "PED002",
@@ -3285,6 +3433,445 @@
           }
         ]
       }
-    ]
+    ],
+    "source": {
+      "title": "熱性けいれんの前方視的研究「FEBSTAT study」への期待",
+      "url": "https://www.jstage.jst.go.jp/article/fpj/146/1/146_66/_article/-char/ja/"
+    }
+  },
+  {
+    "id": "CASE_P_001",
+    "title": "小児の意識障害と呼吸苦",
+    "complaint": "発熱後の意識混濁と呼吸促迫",
+    "patient": "3歳男児、既往歴特になし。3日前から発熱、咳、鼻水あり。昨日から嘔吐も出現し、本日朝より呼びかけへの反応が鈍くなり、呼吸が速いと母親が訴え受診。",
+    "diagnosis": "インフルエンザ脳症",
+    "status": "danger",
+    "vitals": {
+      "hr": 135,
+      "bp_sys": 85,
+      "bp_dia": 50,
+      "spo2": 90
+    },
+    "description": "意識レベル低下(JCS II-10, GCS E3V4M5)、両肺野でcoarse crackle聴取。",
+    "steps": [
+      {
+        "q": "まず行うべき対応は何ですか？",
+        "opts": [
+          {
+            "id": "a1_1",
+            "text": "採血（炎症反応、電解質、血糖、肝機能）、尿検査を指示する",
+            "ok": false,
+            "critical": false,
+            "fb": "必要な検査ですが、より緊急性の高い対応があります。"
+          },
+          {
+            "id": "a1_2",
+            "text": "家族から詳細な病歴聴取を行う",
+            "ok": false,
+            "critical": false,
+            "fb": "重要な情報ですが、先に安定化を図る必要があります。"
+          },
+          {
+            "id": "a1_3",
+            "text": "気道確保、酸素投与、点滴ルート確保を行う",
+            "ok": true,
+            "critical": true,
+            "fb": "その通りです。ABCの評価と初期安定化が最優先です。"
+          },
+          {
+            "id": "a1_4",
+            "text": "頭部CTをオーダーする",
+            "ok": false,
+            "critical": false,
+            "fb": "脳症が疑われますが、先に全身状態を安定させる必要があります。"
+          }
+        ]
+      },
+      {
+        "q": "初期対応後、次に重要な鑑別診断と検査は何ですか？",
+        "opts": [
+          {
+            "id": "a2_1",
+            "text": "細菌性髄膜炎を疑い、腰椎穿刺の準備と広域抗菌薬投与を考慮する",
+            "ok": false,
+            "critical": true,
+            "fb": "鑑別の一つですが、まずは感染症の種類を確認すべきです。"
+          },
+          {
+            "id": "a2_2",
+            "text": "インフルエンザ迅速検査、胸部X線、脳波、頭部MRIをオーダーする",
+            "ok": true,
+            "critical": false,
+            "fb": "インフルエンザ脳症を強く疑うため、これらの検査は診断に必須です。胸部X線で合併症も確認します。"
+          },
+          {
+            "id": "a2_3",
+            "text": "胃腸炎による脱水を疑い、輸液負荷を強化する",
+            "ok": false,
+            "critical": false,
+            "fb": "脱水も考えられますが、意識レベル低下はより重篤な原因を疑わせます。"
+          },
+          {
+            "id": "a2_4",
+            "text": "小児科専門医へコンサルトし、集中治療室への入室を検討する",
+            "ok": true,
+            "critical": false,
+            "fb": "適切な判断です。専門医への相談と重症度に応じた治療環境の準備は重要です。"
+          }
+        ]
+      }
+    ],
+    "source": {
+      "title": "9）インフルエンザ診療の最前線",
+      "url": "https://www.jstage.jst.go.jp/article/naika/110/9/110_1965/_article/-char/ja/"
+    }
+  },
+  {
+    "id": "CASE_N_001",
+    "title": "顔面の電撃痛",
+    "complaint": "右頬部の激しい発作性の痛み",
+    "patient": "72歳男性。数ヶ月前から、食事や歯磨きの際に右頬部に電撃のような激痛が数秒間走るようになった。痛みのない間は全く症状なし。市販の痛み止めは効果がない。",
+    "diagnosis": "三叉神経痛",
+    "status": "warning",
+    "vitals": {
+      "hr": 75,
+      "bp_sys": 145,
+      "bp_dia": 80,
+      "spo2": 98
+    },
+    "description": "意識清明。神経学的所見で異常なし。右頬部の特定トリガーポイントに触れると痛みを訴える。",
+    "steps": [
+      {
+        "q": "まず確認すべきことは何ですか？",
+        "opts": [
+          {
+            "id": "b1_1",
+            "text": "痛みの部位、性質、誘発因子、持続時間、既往歴（帯状疱疹など）について詳細に問診する",
+            "ok": true,
+            "critical": false,
+            "fb": "その通りです。特徴的な問診が診断の鍵となります。"
+          },
+          {
+            "id": "b1_2",
+            "text": "歯科的な問題を除外するため、口腔内診察と歯科へのコンサルトを検討する",
+            "ok": false,
+            "critical": false,
+            "fb": "歯科的な問題も鑑別ですが、まずは痛みの特徴から疾患を絞り込むべきです。"
+          },
+          {
+            "id": "b1_3",
+            "text": "頭部CTを緊急でオーダーし、脳腫瘍などの器質的病変を除外する",
+            "ok": false,
+            "critical": true,
+            "fb": "緊急性は低いですが、後で脳の画像検査は必要になります。先に問診で情報収集しましょう。"
+          },
+          {
+            "id": "b1_4",
+            "text": "痛みに対して鎮痛剤（NSAIDs）を処方し、経過を見る",
+            "ok": false,
+            "critical": false,
+            "fb": "一般的な鎮痛剤は三叉神経痛には効果が乏しいことが多いです。"
+          }
+        ]
+      },
+      {
+        "q": "疑われる疾患に対する治療薬の選択と、さらに必要な鑑別検査は何ですか？",
+        "opts": [
+          {
+            "id": "b2_1",
+            "text": "カルバマゼピンの投与を開始し、頭部MRIをオーダーする",
+            "ok": true,
+            "critical": false,
+            "fb": "カルバマゼピンは三叉神経痛の第一選択薬です。頭部MRIは二次性三叉神経痛を除外するために必須です。"
+          },
+          {
+            "id": "b2_2",
+            "text": "プレガバリンの投与を開始し、神経ブロックを検討する",
+            "ok": false,
+            "critical": false,
+            "fb": "プレガバリンも神経痛に用いられますが、三叉神経痛の初期治療としてはカルバマゼピンが優先されます。神経ブロックは専門医に相談後に検討します。"
+          },
+          {
+            "id": "b2_3",
+            "text": "抗うつ薬の投与を開始し、精神科にコンサルトする",
+            "ok": false,
+            "critical": false,
+            "fb": "心理的な側面も考えられますが、まずは器質的な原因を評価すべきです。"
+          },
+          {
+            "id": "b2_4",
+            "text": "抗菌薬を投与し、感染症の有無を再評価する",
+            "ok": false,
+            "critical": false,
+            "fb": "電撃痛の性質から感染症は考えにくいです。"
+          }
+        ]
+      }
+    ],
+    "source": {
+      "title": "当帰四逆加呉茱萸生姜湯が奏効した三叉神経痛の二症例",
+      "url": "https://www.jstage.jst.go.jp/article/kampomed/72/2/72_144/_article/-char/ja/"
+    }
+  },
+  {
+    "id": "CASE_I_001",
+    "title": "全身の倦怠感と原因不明の痛み",
+    "complaint": "全身の倦怠感とあちこちの痛み",
+    "patient": "45歳女性。半年前から全身の倦怠感が続き、肩、腰、膝などあちこちの関節や筋肉が痛む。近医で血液検査やX線検査を受けたが異常なしと言われた。睡眠も浅く、仕事も集中できない。",
+    "diagnosis": "線維筋痛症",
+    "status": "warning",
+    "vitals": {
+      "hr": 78,
+      "bp_sys": 125,
+      "bp_dia": 75,
+      "spo2": 99
+    },
+    "description": "表情にやや生気がなく、話を聞くと涙ぐむ場面がある。身体所見では圧痛点は複数あるが、腫脹や発赤などの器質的異常は認められない。",
+    "steps": [
+      {
+        "q": "まず行うべき対応は何ですか？",
+        "opts": [
+          {
+            "id": "c1_1",
+            "text": "痛みの部位、性質、時間経過、増悪・寛解因子、既往歴、現在の服薬状況、精神状態（抑うつ気分、不安など）について詳細に問診する",
+            "ok": true,
+            "critical": false,
+            "fb": "その通りです。身体的な情報だけでなく、精神・心理的側面も重要です。"
+          },
+          {
+            "id": "c1_2",
+            "text": "さらに詳細な画像検査（全身MRIなど）を手配する",
+            "ok": false,
+            "critical": false,
+            "fb": "すでに複数の検査で異常がないとのことなので、一旦保留し、問診で情報を深めるべきです。"
+          },
+          {
+            "id": "c1_3",
+            "text": "痛み止めとしてNSAIDsを処方し、様子を見るよう指示する",
+            "ok": false,
+            "critical": false,
+            "fb": "原因不明の慢性疼痛に対しては、対症療法だけでは不十分な場合が多いです。"
+          },
+          {
+            "id": "c1_4",
+            "text": "精神科にすぐコンサルトする",
+            "ok": false,
+            "critical": false,
+            "fb": "精神的な要素も考えられますが、まずは身体的な疾患の除外を徹底する必要があります。"
+          }
+        ]
+      },
+      {
+        "q": "器質的な原因を除外するために、次に考慮すべき検査は何ですか？",
+        "opts": [
+          {
+            "id": "c2_1",
+            "text": "抗核抗体、RF、CKなどの自己免疫疾患や筋疾患の検査を追加する",
+            "ok": true,
+            "critical": false,
+            "fb": "はい、一般的な血液検査で異常がなくとも、特定の疾患を除外するために追加検査は重要です。"
+          },
+          {
+            "id": "c2_2",
+            "text": "心理検査（SDS, HADSなど）を実施し、精神科医へコンサルトを検討する",
+            "ok": true,
+            "critical": false,
+            "fb": "適切な評価です。身体症状が優位な場合でも、心理的要因が深く関わっていることがあります。"
+          },
+          {
+            "id": "c2_3",
+            "text": "神経伝導速度検査や筋電図検査を実施する",
+            "ok": false,
+            "critical": false,
+            "fb": "神経・筋疾患も鑑別ですが、広範な倦怠感や痛みから、まずはより一般的な全身性疾患を鑑別すべきです。"
+          },
+          {
+            "id": "c2_4",
+            "text": "PET-CTを行い、隠れた悪性腫瘍を検索する",
+            "ok": false,
+            "critical": true,
+            "fb": "侵襲性が高く、現在の情報では優先度は低いです。まずは一般的なスクリーニング検査を行います。"
+          }
+        ]
+      }
+    ],
+    "source": {
+      "title": "慢性疼痛に対する認知行動療法（CBT-CP）が奏効した2症例からみる痛み症状と心理社会的問題の関係について",
+      "url": "https://www.jstage.jst.go.jp/article/jcogther/19/1/19_49/_article/-char/ja/"
+    }
+  },
+  {
+    "id": "CASE_M_001",
+    "title": "呼吸困難と下肢浮腫の高齢女性",
+    "complaint": "息苦しさ、足のむくみ",
+    "patient": "80歳女性。高血圧、陳旧性心筋梗塞の既往あり。ここ数日、坂道を上ると息苦しくなり、昨夜から横になると咳が出て眠れない。両足のむくみもひどくなった。",
+    "diagnosis": "急性心不全増悪",
+    "status": "danger",
+    "vitals": {
+      "hr": 105,
+      "bp_sys": 160,
+      "bp_dia": 95,
+      "spo2": 91
+    },
+    "description": "意識清明。軽度のチアノーゼあり。呼吸数28/分。両肺野で水泡音聴取。下腿に+3の圧痕性浮腫あり。心音は頻脈でギャロップ音聴取。",
+    "steps": [
+      {
+        "q": "まず行うべき初期対応は何ですか？",
+        "opts": [
+          {
+            "id": "d1_1",
+            "text": "酸素投与（高流量）、座位保持、点滴ルート確保、心電図モニター装着を行う",
+            "ok": true,
+            "critical": true,
+            "fb": "その通りです。呼吸困難が主訴であり、循環動態の評価と安定化が最優先です。"
+          },
+          {
+            "id": "d1_2",
+            "text": "採血（BNP, トロポニンT, 腎機能, 電解質）をオーダーする",
+            "ok": false,
+            "critical": false,
+            "fb": "重要な検査ですが、先に呼吸状態の改善と全身状態の安定化を図る必要があります。"
+          },
+          {
+            "id": "d1_3",
+            "text": "胸部X線を撮影し、肺うっ血の程度を確認する",
+            "ok": false,
+            "critical": false,
+            "fb": "診断に必須ですが、初期安定化の後に行うべきです。"
+          },
+          {
+            "id": "d1_4",
+            "text": "フロセミドを静注する",
+            "ok": true,
+            "critical": true,
+            "fb": "正しい選択です。利尿薬は肺うっ血の改善に有効です。"
+          }
+        ]
+      },
+      {
+        "q": "初期対応と並行して、確定診断のために必要な検査は何ですか？",
+        "opts": [
+          {
+            "id": "d2_1",
+            "text": "心臓超音波検査をオーダーし、心機能（EF）や弁膜症の有無を評価する",
+            "ok": true,
+            "critical": false,
+            "fb": "心臓超音波検査は心不全の重症度評価と原因特定に不可欠です。"
+          },
+          {
+            "id": "d2_2",
+            "text": "頭部CTをオーダーし、脳出血を除外する",
+            "ok": false,
+            "critical": false,
+            "fb": "現在の症状からは優先度が低いです。"
+          },
+          {
+            "id": "d2_3",
+            "text": "腹部エコーを行い、肝腫大や腹水の有無を評価する",
+            "ok": false,
+            "critical": false,
+            "fb": "心不全の徴候として重要ですが、心臓の直接的な評価が優先です。"
+          },
+          {
+            "id": "d2_4",
+            "text": "喘息発作を疑い、気管支拡張薬を吸入させる",
+            "ok": false,
+            "critical": true,
+            "fb": "既往歴と身体所見から心不全が最も疑われ、誤った治療は危険です。"
+          }
+        ]
+      }
+    ],
+    "source": {
+      "title": "よい症例報告の書き方",
+      "url": "https://www.jstage.jst.go.jp/article/ojjscn/57/6/57_415/_article/-char/ja/"
+    }
+  },
+  {
+    "id": "CASE_P_002",
+    "title": "乳児の発熱と不機嫌、意識障害",
+    "complaint": "39℃の発熱と不機嫌",
+    "patient": "生後3ヶ月女児。2日前から38℃台の発熱があったが、本日朝から39.5℃に上昇し、ミルクの飲みが悪く、抱いても泣き止まず不機嫌。",
+    "diagnosis": "細菌性髄膜炎",
+    "status": "danger",
+    "vitals": {
+      "hr": 160,
+      "bp_sys": 70,
+      "bp_dia": 40,
+      "spo2": 95
+    },
+    "description": "意識レベルは刺激に対してわずかに開眼する程度。大泉門はやや膨隆。項部硬直は軽度。全身に紅斑は認めない。呼吸は速く、四肢冷感あり。",
+    "steps": [
+      {
+        "q": "まず行うべき対応は何ですか？",
+        "opts": [
+          {
+            "id": "e1_1",
+            "text": "採血（炎症反応、血糖、電解質、血液培養）、尿検査（導尿）を指示する",
+            "ok": false,
+            "critical": false,
+            "fb": "必要な検査ですが、より緊急性の高い対応があります。"
+          },
+          {
+            "id": "e1_2",
+            "text": "バイタルサインを継続的にモニターし、気道確保、酸素投与、点滴ルート確保を行う",
+            "ok": true,
+            "critical": true,
+            "fb": "その通りです。ABCの評価と初期安定化が最優先です。特に乳児の意識障害と高熱は緊急性が高いです。"
+          },
+          {
+            "id": "e1_3",
+            "text": "アセトアミノフェン坐薬を投与し、解熱を図る",
+            "ok": false,
+            "critical": false,
+            "fb": "解熱も重要ですが、まず全身状態の安定化と診断の検討が必要です。"
+          },
+          {
+            "id": "e1_4",
+            "text": "頭部エコー検査をオーダーする",
+            "ok": false,
+            "critical": false,
+            "fb": "診断に役立つ検査ですが、先に初期安定化と全身の評価が重要です。"
+          }
+        ]
+      },
+      {
+        "q": "初期対応後、最も疑われる疾患の確定診断のために次に何をすべきですか？",
+        "opts": [
+          {
+            "id": "e2_1",
+            "text": "腰椎穿刺を行い、髄液検査を提出する",
+            "ok": true,
+            "critical": true,
+            "fb": "生後3ヶ月の乳児で意識障害と大泉門膨隆があれば、細菌性髄膜炎を強く疑い、髄液検査は確定診断に必須です。"
+          },
+          {
+            "id": "e2_2",
+            "text": "広域抗菌薬の静脈内投与を開始する",
+            "ok": true,
+            "critical": true,
+            "fb": "髄膜炎が疑われる場合、腰椎穿刺検体採取後速やかに経験的抗菌薬を開始することが重要です。"
+          },
+          {
+            "id": "e2_3",
+            "text": "インフルエンザ迅速検査を行い、ウイルス性疾患を除外する",
+            "ok": false,
+            "critical": false,
+            "fb": "ウイルス性疾患も鑑別ですが、乳児の重症感と大泉門膨隆からは細菌性髄膜炎を最優先で考えるべきです。"
+          },
+          {
+            "id": "e2_4",
+            "text": "消化器症状も疑い、便培養検査を提出する",
+            "ok": false,
+            "critical": false,
+            "fb": "消化器症状は伴いません。発熱と意識障害が主要な問題です。"
+          }
+        ]
+      }
+    ],
+    "source": {
+      "title": "N-of-1研究をどう行うか",
+      "url": "https://www.jstage.jst.go.jp/article/jjrmc/59/11/59_59.1111/_article/-char/ja/"
+    }
   }
 ]
