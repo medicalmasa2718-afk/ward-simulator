@@ -1,0 +1,3 @@
+[build]
+  command = "mkdir -p public/data && cp data/cases.json public/data/cases.json"
+  publish = "public"

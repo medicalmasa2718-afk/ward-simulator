@@ -1,0 +1,5 @@
+{
+  "buildCommand": "mkdir -p public/data && cp data/cases.json public/data/cases.json",
+  "outputDirectory": "public",
+  "cleanUrls": true
+}
