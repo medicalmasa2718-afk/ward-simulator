@@ -3,8 +3,8 @@ function doPost(e) {
     var params = JSON.parse(e.postData.contents);
     var action = params.action;
     
+    // 症例データの一覧同期 (実行ユーザー: 自分(システム)のデプロイで実行)
     if (action === "sync_cases") {
-      // 症例データの一覧同期
       var cases = params.cases;
       if (!Array.isArray(cases)) throw new Error("Cases array required");
       
@@ -38,10 +38,8 @@ function doPost(e) {
         var rowValues = [cid, title, complaint, patient, diagnosis, description, sourceTitle, sourceUrl];
         
         if (idRowMap[cid]) {
-          // 既存行を更新
           sheet.getRange(idRowMap[cid], 1, 1, 8).setValues([rowValues]);
         } else {
-          // 新規行を追加
           sheet.appendRow(rowValues);
           idRowMap[cid] = sheet.getLastRow();
         }
@@ -51,8 +49,14 @@ function doPost(e) {
         .setMimeType(ContentService.MimeType.JSON);
     }
     
+    // --- プレイヤー用の処理 (実行ユーザー: アクセスしているユーザーのデプロイで実行) ---
+    var activeEmail = Session.getActiveUser().getEmail();
+    if (!activeEmail) {
+      throw new Error("Google Authentication required. Please authenticate first.");
+    }
+    activeEmail = activeEmail.toLowerCase().trim();
+    
     if (action === "stats") {
-      // 症例スタッツの保存
       var caseId = params.case_id;
       var tried = parseInt(params.tried) || 0;
       var correct = parseInt(params.correct) || 0;
@@ -88,10 +92,8 @@ function doPost(e) {
         .setMimeType(ContentService.MimeType.JSON);
     }
     
-    // 既存のプレイヤースコア保存ロジック
-    var email = (params.email || "").toLowerCase().trim();
-    if (!email) throw new Error("Email required");
-    
+    // プレイヤースコア保存ロジック (emailは偽装防止のため activeEmail を強制)
+    var email = activeEmail;
     var name = params.name;
     var highScore = parseInt(params.high_score) || 0;
     var completedCasesStr = "";
@@ -118,16 +120,26 @@ function doPost(e) {
       }
     }
     
+    var finalName = name ? name.toString().trim() : "";
     if (foundRow !== -1) {
-      sheet.getRange(foundRow, 2).setValue(name);
+      var existingName = (data[foundRow - 1][1] || "").toString().trim();
+      // すでに「匿名医師」や「テスト専攻医」以外の固有のユーザー名が設定されている場合は、上書きを禁止する
+      if (existingName && existingName !== "匿名医師" && existingName !== "テスト専攻医" && finalName) {
+        finalName = existingName; 
+      } else if (!finalName) {
+        finalName = existingName || "匿名医師";
+      }
+      
+      sheet.getRange(foundRow, 2).setValue(finalName);
       sheet.getRange(foundRow, 3).setValue(highScore);
       sheet.getRange(foundRow, 4).setValue(completedCasesStr);
       sheet.getRange(foundRow, 5).setValue(lastPlayed);
     } else {
-      sheet.appendRow([email, name, highScore, completedCasesStr, lastPlayed]);
+      if (!finalName) finalName = "匿名医師";
+      sheet.appendRow([email, finalName, highScore, completedCasesStr, lastPlayed]);
     }
     
-    return ContentService.createTextOutput(JSON.stringify({status: "success"}))
+    return ContentService.createTextOutput(JSON.stringify({status: "success", email: email, name: finalName}))
       .setMimeType(ContentService.MimeType.JSON);
       
   } catch (err) {
@@ -160,33 +172,66 @@ function doGet(e) {
         .setMimeType(ContentService.MimeType.JSON);
     }
     
-    // 既存のプレイヤー取得ロジック
-    var email = e.parameter.email;
-    if (!email) throw new Error("Email required");
-    email = email.toLowerCase().trim();
+    // 別窓認証用のエンドポイント
+    if (action === "auth_trigger") {
+      var activeEmail = Session.getActiveUser().getEmail();
+      var htmlContent = "";
+      if (activeEmail) {
+        htmlContent = "<html><head><meta charset='UTF-8'><title>認証成功</title></head>" +
+                      "<body style='font-family: sans-serif; text-align: center; padding-top: 100px; background: #0f172a; color: #fff;'>" +
+                      "<div style='background: rgba(255,255,255,0.05); display: inline-block; padding: 40px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1);'>" +
+                      "<h2 style='color: #22c55e; margin-bottom: 10px;'>✓ 認証成功</h2>" +
+                      "<p style='font-size: 1.1rem; margin-bottom: 20px;'>Google アカウント (" + activeEmail + ") の連携に成功しました。</p>" +
+                      "<p style='color: #94a3b8; font-size: 0.9rem;'>このウィンドウは自動的に閉じます。ゲーム画面に戻ってください。</p>" +
+                      "</div>" +
+                      "<script>setTimeout(function(){ window.close(); }, 2500);</script>" +
+                      "</body></html>";
+      } else {
+        htmlContent = "<html><head><meta charset='UTF-8'><title>認証エラー</title></head>" +
+                      "<body style='font-family: sans-serif; text-align: center; padding-top: 100px; background: #0f172a; color: #fff;'>" +
+                      "<div style='background: rgba(255,255,255,0.05); display: inline-block; padding: 40px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1);'>" +
+                      "<h2 style='color: #ef4444; margin-bottom: 10px;'>⚠ 認証エラー</h2>" +
+                      "<p style='font-size: 1.1rem;'>Google アカウントのログイン状態が検出できませんでした。</p>" +
+                      "</div>" +
+                      "</body></html>";
+      }
+      return HtmlService.createHtmlOutput(htmlContent);
+    }
     
+    // ログイン情報の自動確認 (action === "login_check" またはデフォルト)
+    var activeEmail = Session.getActiveUser().getEmail();
+    if (!activeEmail) {
+      return ContentService.createTextOutput(JSON.stringify({status: "unauthenticated"}))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+    
+    var email = activeEmail.toLowerCase().trim();
     var ss = SpreadsheetApp.getActiveSpreadsheet();
     var sheet = ss.getSheetByName("Users") || ss.getActiveSheet();
     
-    var userRecord = { email: email, name: "匿名医師", high_score: 0, completed_cases: [], last_played: "" };
+    var userRecord = { email: email, name: "匿名医師", high_score: 0, completed_cases: [], last_played: "", status: "not_found" };
     
     if (sheet.getLastRow() > 1) {
       var data = sheet.getDataRange().getValues();
       var found = false;
       for (var i = 1; i < data.length; i++) {
         if (data[i][0] && data[i][0].toString().toLowerCase() === email) {
+          var uName = (data[i][1] || "").toString().trim();
           userRecord = {
             email: data[i][0],
-            name: data[i][1],
+            name: uName || "匿名医師",
             high_score: parseInt(data[i][2]) || 0,
             completed_cases: data[i][3] ? data[i][3].toString().split(",") : [],
-            last_played: data[i][4] ? data[i][4].toString() : ""
+            last_played: data[i][4] ? data[i][4].toString() : "",
+            status: (!uName || uName === "匿名医師") ? "not_registered" : "success"
           };
           found = true;
           break;
         }
       }
-      userRecord.status = found ? "success" : "not_found";
+      if (!found) {
+        userRecord.status = "not_found";
+      }
     } else {
       userRecord.status = "not_found";
     }

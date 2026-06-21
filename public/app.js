@@ -33,9 +33,11 @@ const screens = {
   result: document.getElementById('result-screen'),
 };
 
-const lobbyInput = document.getElementById('username');
-const userEmailInput = document.getElementById('user-email');
-const btnJoin = document.getElementById('btn-join');
+const lobbyLoading = document.getElementById('lobby-loading');
+const lobbyAuthRequired = document.getElementById('lobby-auth-required');
+const lobbyRegistrationPanel = document.getElementById('lobby-registration-panel');
+const regUsernameInput = document.getElementById('reg-username');
+const btnRegisterName = document.getElementById('btn-register-name');
 const btnGoogleLogin = document.getElementById('btn-google-login');
 const lobbyWaiting = document.getElementById('lobby-waiting');
 
@@ -496,13 +498,23 @@ async function init() {
     console.error("Failed to load cases:", e);
   }
   
-  // Try checking GAS URL connectivity silently if configured
-  if (gasUrl) {
-    testGasConnection();
-  }
-  
   // Directly render lobby state
   updateState(currentGameState);
+
+  // Trigger silent auto login check
+  if (gasUrl) {
+    checkAutoLogin(true); // silent = true
+  } else {
+    // If no gas URL, show unauthenticated/local mode
+    showLobbySubPanel('auth');
+  }
+}
+
+function showLobbySubPanel(panelId) {
+  if (lobbyLoading) lobbyLoading.style.display = panelId === 'loading' ? 'block' : 'none';
+  if (lobbyAuthRequired) lobbyAuthRequired.style.display = panelId === 'auth' ? 'block' : 'none';
+  if (lobbyRegistrationPanel) lobbyRegistrationPanel.style.display = panelId === 'register' ? 'block' : 'none';
+  if (lobbyWaiting) lobbyWaiting.style.display = panelId === 'waiting' ? 'block' : 'none';
 }
 
 function populateAdminCaseSelector() {
@@ -520,106 +532,155 @@ function recordStats(caseId, tried, correct) {
   if (!gasUrl) return;
   fetch(gasUrl, {
     method: 'POST',
+    mode: 'cors',
     body: JSON.stringify({ action: "stats", case_id: caseId, tried: tried, correct: correct })
   }).catch(e => console.error(e));
 }
 
-async function testGasConnection() {
-  if (!gasUrl) return;
+// --- DATABASE SYNC LOGICS (GAS & LocalStorage) ---
+let loginCheckInterval = null;
+
+async function checkAutoLogin(silent = false) {
+  if (!gasUrl) {
+    showLobbySubPanel('auth');
+    return;
+  }
+  
+  if (!silent) showLobbySubPanel('loading');
+
   try {
-    const testUrl = `${gasUrl}?email=test_connection_ping@gmail.com`;
-    const res = await fetchWithTimeout(testUrl, { mode: 'cors' });
+    const checkUrl = `${gasUrl}?action=login_check&t=${Date.now()}`;
+    const res = await fetchWithTimeout(checkUrl, { mode: 'cors' });
     const data = await res.json();
-    if (data && (data.status === "success" || data.status === "not_found")) {
+    
+    if (data && data.status === "unauthenticated") {
       isGasActive = true;
+      showLobbySubPanel('auth');
+    } else if (data && (data.status === "success" || data.status === "not_registered" || data.status === "not_found")) {
+      isGasActive = true;
+      
+      const user = {
+        email: data.email,
+        name: data.name || "匿名医師",
+        high_score: parseInt(data.high_score) || 0,
+        completed_cases: Array.isArray(data.completed_cases) 
+          ? data.completed_cases 
+          : (data.completed_cases ? data.completed_cases.split(",") : []),
+        last_played: data.last_played || ""
+      };
+      
+      currentUserData = user;
+      
+      if (loginCheckInterval) {
+        clearInterval(loginCheckInterval);
+        loginCheckInterval = null;
+      }
+      
+      if (data.status === "not_registered" || data.status === "not_found" || user.name === "匿名医師") {
+        showLobbySubPanel('register');
+      } else {
+        hasJoined = true;
+        updateConnectionBadges();
+        showLobbySubPanel('waiting');
+        renderDashboard(user);
+      }
     } else {
       isGasActive = false;
+      showLobbySubPanel('auth');
     }
   } catch (err) {
-    console.warn("GAS connection test failed:", err);
+    console.warn("Auto login check failed:", err);
     isGasActive = false;
+    showLobbySubPanel('auth');
   }
   updateConnectionBadges();
 }
 
-// --- DATABASE SYNC LOGICS (GAS & LocalStorage) ---
-async function loginUser(email, nickname) {
-  email = email.toLowerCase().trim();
-  let user = null;
-  let gasSuccess = false;
+async function registerUserName() {
+  const nickname = regUsernameInput.value.trim();
+  if (!nickname) {
+    alert("登録する医師名（表示名）を入力してください。");
+    return;
+  }
+  if (nickname === "匿名医師" || nickname === "テスト専攻医") {
+    alert("その名前は使用できません。別の医師名を入力してください。");
+    return;
+  }
   
-  btnJoin.disabled = true;
-  btnJoin.innerText = "通信中...";
-  btnGoogleLogin.disabled = true;
-
-  if (gasUrl) {
+  showLobbySubPanel('loading');
+  
+  if (currentUserData) {
+    currentUserData.name = nickname;
+    currentUserData.last_played = new Date().toLocaleString("ja-JP", {timeZone: "Asia/Tokyo"});
+    
     try {
-      const url = `${gasUrl}?email=${encodeURIComponent(email)}`;
-      const res = await fetchWithTimeout(url, { mode: 'cors' });
-      const data = await res.json();
-      if (data && (data.status === "success" || data.status === "not_found")) {
-        gasSuccess = true;
+      const data = await saveToGas(currentUserData);
+      if (data && data.status === "success") {
+        currentUserData.name = data.name; // Keep final name saved by GAS
+        hasJoined = true;
         isGasActive = true;
-        if (data.status === "success") {
-          user = {
-            email: data.email,
-            name: data.name || nickname,
-            high_score: parseInt(data.high_score) || 0,
-            completed_cases: Array.isArray(data.completed_cases) 
-              ? data.completed_cases 
-              : (data.completed_cases ? data.completed_cases.split(",") : []),
-            last_played: data.last_played || new Date().toLocaleString("ja-JP", {timeZone: "Asia/Tokyo"})
-          };
-        }
+        updateConnectionBadges();
+        showLobbySubPanel('waiting');
+        renderDashboard(currentUserData);
+      } else {
+        alert("登録エラーが発生しました: " + (data ? data.message : "不明なエラー"));
+        showLobbySubPanel('register');
       }
     } catch (e) {
-      console.warn("GAS login failed, falling back to local database:", e);
-      isGasActive = false;
+      console.error("Failed to register name:", e);
+      alert("通信エラーが発生しました。時間を置いてやり直してください。");
+      showLobbySubPanel('register');
     }
+  } else {
+    alert("セッションが見つかりません。再ログインしてください。");
+    showLobbySubPanel('auth');
   }
+}
 
-  // Fallback to local storage
-  if (!user) {
-    const localDb = JSON.parse(localStorage.getItem('users_db') || '{}');
-    if (localDb[email]) {
-      user = localDb[email];
-      user.name = nickname; // Overwrite name with newest input
-    } else {
-      user = {
-        email: email,
-        name: nickname,
-        high_score: 0,
-        completed_cases: [],
-        last_played: ""
-      };
+async function startGoogleLoginFlow() {
+  if (!gasUrl) {
+    alert("GAS連携URLが設定されていません。⚙️設定から登録してください。");
+    return;
+  }
+  
+  const authUrl = `${gasUrl}?action=auth_trigger`;
+  const width = 600;
+  const height = 650;
+  const left = (screen.width - width) / 2;
+  const top = (screen.height - height) / 2;
+  
+  const authWindow = window.open(
+    authUrl, 
+    'NaikaTouchokuAuthPopup', 
+    `width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=yes,status=yes`
+  );
+  
+  if (loginCheckInterval) clearInterval(loginCheckInterval);
+  
+  showLobbySubPanel('loading');
+  
+  loginCheckInterval = setInterval(async () => {
+    if (authWindow && authWindow.closed) {
+      clearInterval(loginCheckInterval);
+      loginCheckInterval = null;
+      checkAutoLogin();
+      return;
     }
-  }
-
-  currentUserData = user;
-  isGasActive = gasSuccess;
-
-  // Sync to local storage
-  const localDb = JSON.parse(localStorage.getItem('users_db') || '{}');
-  localDb[email] = user;
-  localStorage.setItem('users_db', JSON.stringify(localDb));
-
-  // If new user on GAS, post initial registration
-  if (gasSuccess && gasUrl && !user.last_played) {
+    
     try {
-      user.last_played = new Date().toLocaleString("ja-JP", {timeZone: "Asia/Tokyo"});
-      await saveToGas(user);
+      const checkUrl = `${gasUrl}?action=login_check&t=${Date.now()}`;
+      const res = await fetchWithTimeout(checkUrl, { mode: 'cors' });
+      const data = await res.json();
+      if (data && data.status !== "unauthenticated") {
+        if (authWindow) authWindow.close();
+        clearInterval(loginCheckInterval);
+        loginCheckInterval = null;
+        checkAutoLogin();
+      }
     } catch (e) {
-      console.error("GAS registration post failed:", e);
+      // ignore
     }
-  }
-
-  btnJoin.disabled = false;
-  btnJoin.innerText = "ログインして当直室に入る";
-  btnGoogleLogin.disabled = false;
-
-  hasJoined = true;
-  updateConnectionBadges();
-  renderDashboard(user);
+  }, 1500);
 }
 
 async function saveUserScore() {
@@ -650,18 +711,17 @@ async function saveUserScore() {
 
   currentUserData.last_played = new Date().toLocaleString("ja-JP", {timeZone: "Asia/Tokyo"});
 
-  // Always sync to local storage
   const localDb = JSON.parse(localStorage.getItem('users_db') || '{}');
   localDb[email] = currentUserData;
   localStorage.setItem('users_db', JSON.stringify(localDb));
 
-  // Sync to GAS
   if (gasUrl) {
     addLog("📡 GASへのスコア同期中...");
     try {
       const data = await saveToGas(currentUserData);
       if (data && data.status === "success") {
         isGasActive = true;
+        currentUserData.name = data.name;
         addLog("🟢 GASスプレッドシートへの同期が完了しました。");
       } else {
         isGasActive = false;
@@ -677,7 +737,6 @@ async function saveUserScore() {
 }
 
 async function saveToGas(user) {
-  // CORS POST without Content-Type header to avoid OPTIONS preflight block
   const res = await fetchWithTimeout(gasUrl, {
     method: "POST",
     mode: "cors",
@@ -698,9 +757,12 @@ function updateState(newState) {
   
   if (!hasJoined) {
     switchScreen('lobby');
-    document.getElementById('login-auth-panel').style.display = 'block';
     lobbyWaiting.style.display = 'none';
   } else {
+    if (lobbyLoading) lobbyLoading.style.display = 'none';
+    if (lobbyAuthRequired) lobbyAuthRequired.style.display = 'none';
+    if (lobbyRegistrationPanel) lobbyRegistrationPanel.style.display = 'none';
+    
     if (newState.status === "LOBBY") {
       switchScreen('lobby');
       AudioMonitor.stopAlarm();
@@ -733,8 +795,7 @@ function switchScreen(screenKey) {
 // --- LOBBY/DASHBOARD SCREEN CONTROLLER ---
 function renderDashboard(user) {
   hasJoined = true;
-  document.getElementById('login-auth-panel').style.display = 'none';
-  lobbyWaiting.style.display = 'block';
+  showLobbySubPanel('waiting');
   
   document.getElementById('dash-name').innerText = `${user.name} 医師`;
   document.getElementById('dash-email').innerText = user.email;
@@ -744,24 +805,17 @@ function renderDashboard(user) {
   document.getElementById('dash-completed').innerText = `${completedCount} / 6 件`;
 }
 
-// Handle Custom Test Account Sign-in
-btnJoin.addEventListener('click', () => {
-  const email = userEmailInput.value.trim();
-  const nickname = lobbyInput.value.trim();
-  if (!email || !nickname) {
-    alert("テスト用メールアドレスと表示名を入力してください。");
-    return;
-  }
-  loginUser(email, nickname);
+// Handle Google Authentication triggering via popup
+btnGoogleLogin.addEventListener('click', () => {
+  startGoogleLoginFlow();
 });
 
-// Handle simulated Google Sign-in Mockup
-btnGoogleLogin.addEventListener('click', () => {
-  const randomSuffix = Math.floor(Math.random() * 900) + 100;
-  const dummyEmail = `resident${randomSuffix}@gmail.com`;
-  const dummyName = `専攻医${randomSuffix}先生`;
-  loginUser(dummyEmail, dummyName);
-});
+// Handle Name Registration
+if (btnRegisterName) {
+  btnRegisterName.addEventListener('click', () => {
+    registerUserName();
+  });
+}
 
 // Start shift
 const btnStart = document.getElementById('btn-start');
