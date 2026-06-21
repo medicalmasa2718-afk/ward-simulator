@@ -912,6 +912,37 @@ h1, h2, h3 {
   justify-content: space-between;
 }
 
+.debrief-source {
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px dashed var(--border-light);
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.75rem;
+}
+
+.debrief-source .source-label {
+  color: #94a3b8;
+  flex-shrink: 0;
+}
+
+.debrief-source .source-link {
+  color: #38bdf8;
+  text-decoration: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+  border-bottom: 1px solid transparent;
+}
+
+.debrief-source .source-link:hover {
+  color: #7dd3fc;
+  border-bottom-color: #7dd3fc;
+  text-shadow: 0 0 8px rgba(125, 211, 252, 0.4);
+}
+
 .result-actions {
   text-align: center;
   margin-top: 2rem;

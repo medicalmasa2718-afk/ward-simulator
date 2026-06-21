@@ -3,6 +3,54 @@ function doPost(e) {
     var params = JSON.parse(e.postData.contents);
     var action = params.action;
     
+    if (action === "sync_cases") {
+      // 症例データの一覧同期
+      var cases = params.cases;
+      if (!Array.isArray(cases)) throw new Error("Cases array required");
+      
+      var ss = SpreadsheetApp.getActiveSpreadsheet();
+      var sheet = ss.getSheetByName("CaseMaster");
+      if (!sheet) {
+        sheet = ss.insertSheet("CaseMaster");
+        sheet.appendRow(["症例ID", "疾患名", "主訴", "患者情報", "確定診断名", "状況説明", "出典タイトル", "出典URL"]);
+        sheet.getRange(1, 1, 1, 8).setFontWeight("bold").setBackground("#dcfce7"); // 薄緑
+      }
+      
+      var data = sheet.getDataRange().getValues();
+      var idRowMap = {};
+      for (var i = 1; i < data.length; i++) {
+        if (data[i][0]) {
+          idRowMap[data[i][0].toString()] = i + 1;
+        }
+      }
+      
+      for (var j = 0; j < cases.length; j++) {
+        var c = cases[j];
+        var cid = c.id || "";
+        var title = c.title || "";
+        var complaint = c.complaint || "";
+        var patient = c.patient || "";
+        var diagnosis = c.diagnosis || "";
+        var description = c.description || "";
+        var sourceTitle = (c.source && c.source.title) || "";
+        var sourceUrl = (c.source && c.source.url) || "";
+        
+        var rowValues = [cid, title, complaint, patient, diagnosis, description, sourceTitle, sourceUrl];
+        
+        if (idRowMap[cid]) {
+          // 既存行を更新
+          sheet.getRange(idRowMap[cid], 1, 1, 8).setValues([rowValues]);
+        } else {
+          // 新規行を追加
+          sheet.appendRow(rowValues);
+          idRowMap[cid] = sheet.getLastRow();
+        }
+      }
+      
+      return ContentService.createTextOutput(JSON.stringify({status: "success", count: cases.length}))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+    
     if (action === "stats") {
       // 症例スタッツの保存
       var caseId = params.case_id;

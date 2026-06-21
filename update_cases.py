@@ -45,8 +45,19 @@ def fetch_jstage_abstracts(count=5):
                 if title_node is None:
                     title_node = entry.find('atom:article_title/atom:en', ns)
                 
-                if title_node is not None and title_node.text:
-                    abstracts.append(title_node.text)
+                link_node = entry.find('atom:link[@rel="alternate"]', ns)
+                link_url = link_node.attrib.get('href') if link_node is not None else None
+                
+                if not link_url:
+                    id_node = entry.find('atom:id', ns)
+                    if id_node is not None and id_node.text and id_node.text.startswith("http"):
+                        link_url = id_node.text
+                
+                if title_node is not None and title_node.text and link_url:
+                    abstracts.append({
+                        "title": title_node.text,
+                        "url": link_url
+                    })
             
             if len(abstracts) > count:
                 return random.sample(abstracts, count)
@@ -131,16 +142,22 @@ def main():
     abstracts = fetch_jstage_abstracts(5)
     if abstracts:
         print(f"Generating 5 new cases based on {len(abstracts)} J-STAGE abstracts...")
-        prompt = """あなたはベテラン指導医です。以下のJ-STAGEの症例報告タイトルをヒントに、初期臨床研修医〜医師国家試験レベルの内科・小児科の当直シミュレーションゲーム用の症例JSONを5つ作成してください。産婦人科は除外してください。
+        
+        jstage_info = ""
+        for i, a in enumerate(abstracts):
+            jstage_info += f"{i+1}. タイトル: {a['title']}\n   URL: {a['url']}\n"
+
+        prompt = """あなたはベテラン指導医です。以下のJ-STAGEの症例報告情報をヒントに、初期臨床研修医〜医師国家試験レベルの内科・小児科の当直シミュレーションゲーム用の症例JSONを5つ作成してください。産婦人科は除外してください。
         
 【ルール】
 1. 配列形式で5つのJSONオブジェクトを出力してください。
 2. JSONキー: id (ユニークな英数字), title (疾患名), complaint (主訴), patient (患者情報), diagnosis (確定診断名), status (warning/danger), vitals (hr, bp_sys, bp_dia, spo2), description (状況説明), steps (配列。q, optsの配列を含む。optsはid, text, ok(真偽値), critical(真偽値), fb(フィードバック)を含む)。
 3. タイトルや主訴から疾患名が最初からバレないようにしてください。
 4. 解答(steps)は通常2〜3ステップ程度で構成してください。
+5. 生成する各症例オブジェクトのルートに、必ず "source" というオブジェクトキーを追加し、ヒントにしたJ-STAGE論文のタイトル "title" とURL "url" をそのまま格納してください。
 
 【J-STAGE情報】
-""" + "\n".join(abstracts)
+""" + jstage_info
         
         new_cases = call_gemini(prompt, api_key)
         if new_cases:
@@ -150,6 +167,27 @@ def main():
     with open(CASES_FILE, 'w', encoding='utf-8') as f:
         json.dump(cases, f, indent=2, ensure_ascii=False)
     print(f"Update complete. Total cases now: {len(cases)}")
+    
+    if gas_url and len(cases) > 0:
+        print("Syncing cases to Google Sheet...")
+        try:
+            sync_data = {
+                "action": "sync_cases",
+                "cases": cases
+            }
+            req = urllib.request.Request(
+                gas_url,
+                data=json.dumps(sync_data).encode('utf-8'),
+                headers={'Content-Type': 'application/json'}
+            )
+            with urllib.request.urlopen(req) as response:
+                res = json.loads(response.read().decode('utf-8'))
+                if res.get('status') == 'success':
+                    print(f"Successfully synced {res.get('count')} cases to Google Sheet.")
+                else:
+                    print("GAS Sync Error:", res.get('message'))
+        except Exception as e:
+            print("Failed to sync cases to GAS:", e)
 
 if __name__ == "__main__":
     main()

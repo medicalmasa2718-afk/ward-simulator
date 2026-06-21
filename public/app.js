@@ -1232,6 +1232,7 @@ function spawnEmergency() {
     complaint: chosenCase.complaint,
     diagnosis: chosenCase.diagnosis,
     description: chosenCase.description,
+    source: chosenCase.source ? JSON.parse(JSON.stringify(chosenCase.source)) : null,
     steps: JSON.parse(JSON.stringify(chosenCase.steps)),
     current_step: 0,
     last_feedback: null,
@@ -1278,6 +1279,7 @@ function forceSpawnEmergency(bedId, caseId) {
     complaint: chosenCase.complaint,
     diagnosis: chosenCase.diagnosis,
     description: chosenCase.description,
+    source: chosenCase.source ? JSON.parse(JSON.stringify(chosenCase.source)) : null,
     steps: JSON.parse(JSON.stringify(chosenCase.steps)),
     current_step: 0,
     last_feedback: null,
@@ -1368,7 +1370,8 @@ function performAction(bedId, actionId) {
         diagnosis: evt.diagnosis,
         title: evt.title,
         saved_by: player.name,
-        result: "SUCCESS"
+        result: "SUCCESS",
+        source: evt.source ? JSON.parse(JSON.stringify(evt.source)) : null
       });
     }
   } else {
@@ -1971,15 +1974,29 @@ function renderResult() {
     currentGameState.debriefings.forEach(d => {
       const card = document.createElement('div');
       card.className = `debriefing-card success`;
+      
+      let sourceHtml = '';
+      if (d.source && d.source.title && d.source.url) {
+        sourceHtml = `
+          <div class="debrief-source">
+            <span class="source-label">📄 出典論文:</span>
+            <a href="${escapeHtml(d.source.url)}" target="_blank" rel="noopener noreferrer" class="source-link" title="${escapeHtml(d.source.title)}">
+              ${escapeHtml(d.source.title)}
+            </a>
+          </div>
+        `;
+      }
+      
       card.innerHTML = `
         <div class="debrief-title">
           <span>${escapeHtml(d.title)}</span>
           <span style="font-size:0.75rem; color:var(--success);">✅ 救命完了</span>
         </div>
-        <p style="font-size: 0.85rem; line-height: 1.4;">
+        <p style="font-size: 0.85rem; line-height: 1.4; margin-bottom: 0.5rem;">
           ${escapeHtml(d.patient)} (${escapeHtml(d.diagnosis)}) に対する急変対応は、
           適切な臨床判断により速やかに解決されました。
         </p>
+        ${sourceHtml}
       `;
       debriefingFeed.appendChild(card);
     });
