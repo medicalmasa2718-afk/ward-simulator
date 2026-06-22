@@ -112,42 +112,16 @@
           </div>
         </div>
 
-        <!-- 2. メールアドレス入力画面 -->
-        <div id="lobby-email-entry" class="lobby-sub-panel" style="display: none;">
+        <!-- 2. 医師名入力画面 -->
+        <div id="lobby-username-entry" class="lobby-sub-panel" style="display: none;">
           <p class="settings-description" style="text-align: center; margin-bottom: 1.5rem; line-height: 1.6; color: #94a3b8; font-size: 0.85rem;">
-            本ゲームはメールアドレスと連動して個人戦績を保存します。<br>
-            当直室に入るためにメールアドレスを入力してください。
-          </p>
-          <div class="lobby-form" style="display: flex; flex-direction: column; gap: 0.5rem;">
-            <label for="user-email" style="font-size: 0.85rem; color: #94a3b8;">メールアドレス</label>
-            <input type="email" id="user-email" placeholder="example@gmail.com" autocomplete="off" style="background: rgba(0,0,0,0.3); border: 1px solid var(--border-light); border-radius: 6px; padding: 0.75rem; color: #fff; outline: none; font-size: 0.95rem; margin-bottom: 1rem;">
-            <button id="btn-send-otp" class="btn btn-primary btn-block" style="padding: 0.8rem; border-radius: 8px; font-weight: 700; cursor: pointer;">認証コードを送信</button>
-          </div>
-        </div>
-
-        <!-- 3. 認証コード（OTP）入力画面 -->
-        <div id="lobby-code-entry" class="lobby-sub-panel" style="display: none;">
-          <p id="otp-hint-text" class="settings-description" style="text-align: center; margin-bottom: 1.5rem; line-height: 1.6; color: var(--warning); font-size: 0.85rem; font-weight: bold;">
-            メールアドレス宛に6桁の認証コードを送信しました。
-          </p>
-          <div class="lobby-form" style="display: flex; flex-direction: column; gap: 0.5rem;">
-            <label for="otp-code" style="font-size: 0.85rem; color: #94a3b8;">6桁の認証コード</label>
-            <input type="text" id="otp-code" placeholder="例: 123456" maxlength="6" autocomplete="off" style="background: rgba(0,0,0,0.3); border: 1px solid var(--border-light); border-radius: 6px; padding: 0.75rem; color: #fff; outline: none; font-size: 0.95rem; text-align: center; letter-spacing: 0.3em; font-weight: bold; margin-bottom: 1rem;">
-            <button id="btn-verify-otp" class="btn btn-success btn-block" style="padding: 0.8rem; border-radius: 8px; font-weight: 700; cursor: pointer; background: var(--success); color: #fff; margin-bottom: 0.5rem;">認証してログイン</button>
-            <button id="btn-back-to-email" class="btn btn-block" style="padding: 0.5rem; border-radius: 6px; cursor: pointer; background: #374151; color: #ccc; font-size: 0.8rem; border: none;">メールアドレスを再入力</button>
-          </div>
-        </div>
-
-        <!-- 4. 新規ユーザー登録時 (医師名入力) -->
-        <div id="lobby-registration-panel" class="lobby-sub-panel" style="display: none;">
-          <p style="color: var(--warning); font-size: 0.85rem; margin-bottom: 1rem; text-align: center; font-weight: bold;">
-            ✓ メール認証完了。ゲームで使用する医師名を登録します。
+            当直室に入るために、医師名を入力してください。<br>
+            以前登録した名前を入力すると、ハイスコアや修了症例の戦績を引き継げます。
           </p>
           <div class="lobby-form" style="display: flex; flex-direction: column; gap: 0.5rem;">
             <label for="reg-username" style="font-size: 0.85rem; color: #94a3b8;">当直での表示名（医師名）</label>
-            <input type="text" id="reg-username" placeholder="例: 佐藤先生" maxlength="15" autocomplete="off" style="background: rgba(0,0,0,0.3); border: 1px solid var(--border-light); border-radius: 6px; padding: 0.75rem; color: #fff; outline: none; font-size: 0.95rem;">
-            <span style="font-size: 0.75rem; color: #64748b; display: block; margin-bottom: 1rem;">※1つのアカウントにつき1回のみ登録でき、後から変更できません。</span>
-            <button id="btn-register-name" class="btn btn-primary btn-block" style="padding: 0.8rem; border-radius: 8px; font-weight: 700; cursor: pointer;">医師名を登録してログイン</button>
+            <input type="text" id="reg-username" placeholder="例: 佐藤先生" maxlength="15" autocomplete="off" style="background: rgba(0,0,0,0.3); border: 1px solid var(--border-light); border-radius: 6px; padding: 0.75rem; color: #fff; outline: none; font-size: 0.95rem; text-align: center; margin-bottom: 1rem;">
+            <button id="btn-login-username" class="btn btn-primary btn-block" style="padding: 0.8rem; border-radius: 8px; font-weight: 700; cursor: pointer;">当直を開始する</button>
           </div>
         </div>
 
@@ -157,7 +131,7 @@
             <div class="profile-avatar">🩺</div>
             <div class="profile-info">
               <h3 id="dash-name">---</h3>
-              <p id="dash-email" style="font-size:0.85rem; color:var(--text-muted);">---</p>
+              <p id="dash-email" style="display: none;">---</p>
               <div style="margin-top: 6px;">
                 <span id="lobby-connection-status" class="status-badge local">⚪ ローカル保存モード</span>
               </div>

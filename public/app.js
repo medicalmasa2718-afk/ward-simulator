@@ -34,21 +34,10 @@ const screens = {
 };
 
 const lobbyLoading = document.getElementById('lobby-loading');
-const lobbyEmailEntry = document.getElementById('lobby-email-entry');
-const lobbyCodeEntry = document.getElementById('lobby-code-entry');
-const lobbyRegistrationPanel = document.getElementById('lobby-registration-panel');
-
-const userEmailInput = document.getElementById('user-email');
-const otpCodeInput = document.getElementById('otp-code');
+const lobbyUsernameEntry = document.getElementById('lobby-username-entry');
 const regUsernameInput = document.getElementById('reg-username');
-
-const btnSendOtp = document.getElementById('btn-send-otp');
-const btnVerifyOtp = document.getElementById('btn-verify-otp');
-const btnBackToEmail = document.getElementById('btn-back-to-email');
-const btnRegisterName = document.getElementById('btn-register-name');
-
+const btnLoginUsername = document.getElementById('btn-login-username');
 const lobbyWaiting = document.getElementById('lobby-waiting');
-const otpHintText = document.getElementById('otp-hint-text');
 
 // Settings Drawer DOM Elements
 const btnSettingsToggle = document.getElementById('btn-settings-toggle');
@@ -511,19 +500,12 @@ async function init() {
   updateState(currentGameState);
 
   // Trigger silent auto login check
-  if (gasUrl) {
-    checkAutoLogin(true); // silent = true
-  } else {
-    // If no gas URL, show unauthenticated/local mode
-    showLobbySubPanel('email');
-  }
+  checkAutoLogin(true); // silent = true
 }
 
 function showLobbySubPanel(panelId) {
   if (lobbyLoading) lobbyLoading.style.display = panelId === 'loading' ? 'block' : 'none';
-  if (lobbyEmailEntry) lobbyEmailEntry.style.display = panelId === 'email' ? 'block' : 'none';
-  if (lobbyCodeEntry) lobbyCodeEntry.style.display = panelId === 'code' ? 'block' : 'none';
-  if (lobbyRegistrationPanel) lobbyRegistrationPanel.style.display = panelId === 'register' ? 'block' : 'none';
+  if (lobbyUsernameEntry) lobbyUsernameEntry.style.display = panelId === 'entry' ? 'block' : 'none';
   if (lobbyWaiting) lobbyWaiting.style.display = panelId === 'waiting' ? 'block' : 'none';
 }
 
@@ -548,74 +530,36 @@ function recordStats(caseId, tried, correct) {
 }
 
 async function checkAutoLogin(silent = false) {
-  const email = localStorage.getItem('session_email');
-  if (!gasUrl || !email) {
-    showLobbySubPanel('email');
+  const name = localStorage.getItem('session_username');
+  if (!name) {
+    showLobbySubPanel('entry');
     return;
   }
   
   if (!silent) showLobbySubPanel('loading');
 
-  try {
-    const res = await fetchWithTimeout(`${gasUrl}?action=silent_check&email=${encodeURIComponent(email)}`, {
-      method: 'GET',
-      mode: 'cors'
-    });
-    const data = await res.json();
-    
-    if (data && data.status === "unauthenticated") {
-      isGasActive = true;
-      showLobbySubPanel('email');
-    } else if (data && (data.status === "success" || data.status === "not_registered" || data.status === "not_found")) {
-      isGasActive = true;
-      
-      const user = {
-        email: data.email || email,
-        name: data.name || "匿名医師",
-        high_score: parseInt(data.high_score) || 0,
-        completed_cases: Array.isArray(data.completed_cases) 
-          ? data.completed_cases 
-          : (data.completed_cases ? data.completed_cases.split(",") : []),
-        last_played: data.last_played || ""
-      };
-      
-      currentUserData = user;
-      
-      if (data.status === "not_registered" || data.status === "not_found" || user.name === "匿名医師") {
-        showLobbySubPanel('register');
-      } else {
-        hasJoined = true;
-        updateConnectionBadges();
-        showLobbySubPanel('waiting');
-        renderDashboard(user);
-      }
-    } else {
-      isGasActive = false;
-      showLobbySubPanel('email');
-    }
-  } catch (e) {
-    console.warn("Auto login check failed:", e);
-    isGasActive = false;
-    showLobbySubPanel('email');
-  }
-  updateConnectionBadges();
-}
+  // Fallback data from localStorage in case GAS fails
+  const localDb = JSON.parse(localStorage.getItem('users_db') || '{}');
+  const localUser = localDb[name] || {
+    name: name,
+    high_score: 0,
+    completed_cases: [],
+    last_played: ""
+  };
 
-async function sendOtp() {
-  const email = userEmailInput.value.trim().toLowerCase();
-  if (!email) {
-    alert("メールアドレスを入力してください。");
+  if (!gasUrl) {
+    // Local mode
+    isGasActive = false;
+    currentUserData = localUser;
+    hasJoined = true;
+    updateConnectionBadges();
+    showLobbySubPanel('waiting');
+    renderDashboard(localUser);
     return;
   }
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    alert("正しいメールアドレスの形式で入力してください。");
-    return;
-  }
-  
-  showLobbySubPanel('loading');
-  
+
   try {
-    const res = await fetchWithTimeout(`${gasUrl}?action=send_otp&email=${encodeURIComponent(email)}`, {
+    const res = await fetchWithTimeout(`${gasUrl}?action=login&name=${encodeURIComponent(name)}`, {
       method: 'GET',
       mode: 'cors'
     });
@@ -623,54 +567,92 @@ async function sendOtp() {
     
     if (data && data.status === "success") {
       isGasActive = true;
-      updateConnectionBadges();
       
-      if (data.test_code) {
-        otpHintText.innerHTML = `テストアドレスを検知しました。<br>認証コード: <span style="font-size:1.2rem; font-weight:bold; color:var(--warning);">${data.test_code}</span>`;
-      } else {
-        otpHintText.innerText = "メールアドレス宛に6桁の認証コードを送信しました。";
-      }
+      const user = {
+        name: data.name || name,
+        high_score: parseInt(data.high_score) || 0,
+        completed_cases: Array.isArray(data.completed_cases) 
+          ? data.completed_cases 
+          : (data.completed_cases ? data.completed_cases.split(",") : []),
+        last_played: data.last_played || ""
+      };
       
-      userEmailInput.dataset.currentEmail = email;
-      showLobbySubPanel('code');
+      // Update local storage cache
+      localDb[name] = user;
+      localStorage.setItem('users_db', JSON.stringify(localDb));
+      
+      currentUserData = user;
+      hasJoined = true;
+      showLobbySubPanel('waiting');
+      renderDashboard(user);
     } else {
-      alert("認証コードの送信に失敗しました: " + (data ? data.message : "不明なエラー"));
-      showLobbySubPanel('email');
+      isGasActive = true;
+      currentUserData = localUser;
+      hasJoined = true;
+      showLobbySubPanel('waiting');
+      renderDashboard(localUser);
     }
   } catch (e) {
-    console.error("Failed to send OTP:", e);
-    alert("通信エラーが発生しました。GAS Web App URL が正しいか確認してください。");
-    showLobbySubPanel('email');
+    console.warn("Auto login check from GAS failed, falling back to local database:", e);
+    isGasActive = false;
+    // Silent fallback to local storage
+    currentUserData = localUser;
+    hasJoined = true;
+    showLobbySubPanel('waiting');
+    renderDashboard(localUser);
   }
+  updateConnectionBadges();
 }
 
-async function verifyOtp() {
-  const email = userEmailInput.dataset.currentEmail;
-  const code = otpCodeInput.value.trim();
-  
-  if (!email || !code || code.length !== 6) {
-    alert("6桁の認証コードを正しく入力してください。");
+async function loginByUsername() {
+  const name = regUsernameInput.value.trim();
+  if (!name) {
+    alert("医師名を入力してください。");
+    return;
+  }
+  if (name === "匿名医師" || name === "テスト専攻医") {
+    alert("その名前は使用できません。別の医師名を入力してください。");
     return;
   }
   
   showLobbySubPanel('loading');
   
+  // Set default local user structure
+  const localDb = JSON.parse(localStorage.getItem('users_db') || '{}');
+  const localUser = localDb[name] || {
+    name: name,
+    high_score: 0,
+    completed_cases: [],
+    last_played: new Date().toLocaleString("ja-JP", {timeZone: "Asia/Tokyo"})
+  };
+  
+  if (!gasUrl) {
+    // Local mode login
+    isGasActive = false;
+    currentUserData = localUser;
+    localStorage.setItem('session_username', name);
+    localDb[name] = localUser;
+    localStorage.setItem('users_db', JSON.stringify(localDb));
+    
+    hasJoined = true;
+    updateConnectionBadges();
+    showLobbySubPanel('waiting');
+    renderDashboard(localUser);
+    return;
+  }
+  
   try {
-    const res = await fetchWithTimeout(`${gasUrl}?action=verify_otp&email=${encodeURIComponent(email)}&code=${encodeURIComponent(code)}`, {
+    const res = await fetchWithTimeout(`${gasUrl}?action=login&name=${encodeURIComponent(name)}`, {
       method: 'GET',
       mode: 'cors'
     });
     const data = await res.json();
     
-    if (data && data.status !== "error") {
+    if (data && data.status === "success") {
+      // Existing user found in GAS
       isGasActive = true;
-      updateConnectionBadges();
-      
-      localStorage.setItem('session_email', email);
-      
       const user = {
-        email: data.email || email,
-        name: data.name || "匿名医師",
+        name: data.name || name,
         high_score: parseInt(data.high_score) || 0,
         completed_cases: Array.isArray(data.completed_cases) 
           ? data.completed_cases 
@@ -679,70 +661,57 @@ async function verifyOtp() {
       };
       
       currentUserData = user;
+      localStorage.setItem('session_username', name);
+      localDb[name] = user;
+      localStorage.setItem('users_db', JSON.stringify(localDb));
       
-      if (data.status === "not_registered" || data.status === "not_found" || user.name === "匿名医師") {
-        showLobbySubPanel('register');
-      } else {
-        hasJoined = true;
-        showLobbySubPanel('waiting');
-        renderDashboard(user);
-      }
+      hasJoined = true;
+      showLobbySubPanel('waiting');
+      renderDashboard(user);
     } else {
-      alert("認証エラー: " + (data ? data.message : "認証コードが正しくないか、有効期限が切れています。"));
-      showLobbySubPanel('code');
+      // New user registration on GAS
+      isGasActive = true;
+      currentUserData = localUser;
+      
+      try {
+        const regRes = await saveToGas(localUser);
+        if (regRes && regRes.status === "success") {
+          currentUserData.name = regRes.name;
+        }
+      } catch (err) {
+        console.warn("GAS registration failed, continuing in local mode:", err);
+        isGasActive = false;
+      }
+      
+      localStorage.setItem('session_username', name);
+      localDb[name] = currentUserData;
+      localStorage.setItem('users_db', JSON.stringify(localDb));
+      
+      hasJoined = true;
+      updateConnectionBadges();
+      showLobbySubPanel('waiting');
+      renderDashboard(currentUserData);
     }
   } catch (e) {
-    console.error("Failed to verify OTP:", e);
-    alert("通信エラーが発生しました。");
-    showLobbySubPanel('code');
-  }
-}
-
-async function registerUserName() {
-  const nickname = regUsernameInput.value.trim();
-  if (!nickname) {
-    alert("登録する医師名（表示名）を入力してください。");
-    return;
-  }
-  if (nickname === "匿名医師" || nickname === "テスト専攻医") {
-    alert("その名前は使用できません。別の医師名を入力してください。");
-    return;
-  }
-  
-  showLobbySubPanel('loading');
-  
-  if (currentUserData) {
-    currentUserData.name = nickname;
-    currentUserData.last_played = new Date().toLocaleString("ja-JP", {timeZone: "Asia/Tokyo"});
+    console.warn("GAS login failed, falling back to local database:", e);
+    isGasActive = false;
     
-    try {
-      const data = await saveToGas(currentUserData);
-      if (data && data.status === "success") {
-        currentUserData.name = data.name;
-        hasJoined = true;
-        isGasActive = true;
-        updateConnectionBadges();
-        showLobbySubPanel('waiting');
-        renderDashboard(currentUserData);
-      } else {
-        alert("登録エラーが発生しました: " + (data ? data.message : "不明なエラー"));
-        showLobbySubPanel('register');
-      }
-    } catch (e) {
-      console.error("Failed to register name:", e);
-      alert("通信エラーが発生しました。時間を置いてやり直してください。");
-      showLobbySubPanel('register');
-    }
-  } else {
-    alert("セッションが見つかりません。再ログインしてください。");
-    showLobbySubPanel('email');
+    currentUserData = localUser;
+    localStorage.setItem('session_username', name);
+    localDb[name] = localUser;
+    localStorage.setItem('users_db', JSON.stringify(localDb));
+    
+    hasJoined = true;
+    updateConnectionBadges();
+    showLobbySubPanel('waiting');
+    renderDashboard(localUser);
   }
 }
 
 async function saveUserScore() {
   if (!currentUserData) return;
   
-  const email = currentUserData.email;
+  const name = currentUserData.name;
   const score = currentGameState.players["player"] ? currentGameState.players["player"].score : 0;
   
   let scoreUpdated = false;
@@ -762,13 +731,13 @@ async function saveUserScore() {
   if (mergedCompleted.length > origCompleted.length) {
     currentUserData.completed_cases = mergedCompleted;
     scoreUpdated = true;
-    addLog("🎓 新たに " + newlyCompleted.length + " 件の症例を習得し、学習進捗が保存されました。");
+    addLog("🎓 新たに " + newlyCompleted.length + " 件 of 症例を習得し、学習進捗が保存されました。");
   }
 
   currentUserData.last_played = new Date().toLocaleString("ja-JP", {timeZone: "Asia/Tokyo"});
 
   const localDb = JSON.parse(localStorage.getItem('users_db') || '{}');
-  localDb[email] = currentUserData;
+  localDb[name] = currentUserData;
   localStorage.setItem('users_db', JSON.stringify(localDb));
 
   if (gasUrl) {
@@ -797,7 +766,6 @@ async function saveToGas(user) {
     method: "POST",
     mode: "cors",
     body: JSON.stringify({
-      email: user.email,
       name: user.name,
       high_score: user.high_score,
       completed_cases: user.completed_cases,
@@ -836,9 +804,7 @@ function updateState(newState) {
     lobbyWaiting.style.display = 'none';
   } else {
     if (lobbyLoading) lobbyLoading.style.display = 'none';
-    if (lobbyEmailEntry) lobbyEmailEntry.style.display = 'none';
-    if (lobbyCodeEntry) lobbyCodeEntry.style.display = 'none';
-    if (lobbyRegistrationPanel) lobbyRegistrationPanel.style.display = 'none';
+    if (lobbyUsernameEntry) lobbyUsernameEntry.style.display = 'none';
     
     if (newState.status === "LOBBY") {
       switchScreen('lobby');
@@ -882,29 +848,18 @@ function renderDashboard(user) {
   document.getElementById('dash-completed').innerText = `${completedCount} / 6 件`;
 }
 
-// Handle OTP buttons
-if (btnSendOtp) {
-  btnSendOtp.addEventListener('click', () => {
-    sendOtp();
+// Handle Username Login
+if (btnLoginUsername) {
+  btnLoginUsername.addEventListener('click', () => {
+    loginByUsername();
   });
 }
 
-if (btnVerifyOtp) {
-  btnVerifyOtp.addEventListener('click', () => {
-    verifyOtp();
-  });
-}
-
-if (btnBackToEmail) {
-  btnBackToEmail.addEventListener('click', () => {
-    showLobbySubPanel('email');
-  });
-}
-
-// Handle Name Registration
-if (btnRegisterName) {
-  btnRegisterName.addEventListener('click', () => {
-    registerUserName();
+if (regUsernameInput) {
+  regUsernameInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+      loginByUsername();
+    }
   });
 }
 
